@@ -22,12 +22,21 @@ unsigned int current_timer;
 
 void scheduler(){
 
+	unsigned int time = getTODLO(); // mi salvo quando sono entrato nello scheduler
+
+	//poi vedrò se tocca ancora al currentProcess eseguire, oppure se dobbiamo svegliare qualcun altro
 	//Due possibili casi:
 	//	-Esiste un processo in esecuzione -> context switch
 	//	-Non c'è un processo -> ne carico uno
 
-	if(currentProcess!=NULL){ //current process è quello che deve essere eseguito
+	if(currentProcess!=NULL){
 
+		//controllo se è finito il time slice
+		int slice_end = SCHED_TIME_SLICE - (time - last_slice_start );//tempo che manca alla fine del time slice corrente
+
+		if( slice_end <= 0){ //time slice terminato, setta il prossimo
+			slice_end = SCHED_TIME_SLICE;
+		}
 		//sta in libuarm, Olga dice che in mellotanica c'è un pdf che spiega tutto sugli interrupt device
 		timer+=getTODLO()-last_access; // getTODLO ritorna la "parte bassa" del tod
 		last_access=getTODLO();
@@ -67,42 +76,12 @@ void scheduler(){
 		CPUTimeStart = getTODLO();	//se comincia l'esecuzione di un nuovo processo riparte il conteggio del tempo di CPU
 	}
 	userTimeStart = getTODLO();	//riparte il conteggio del tempo utente
+
+
 	LDST( &current_process->p_s );
 
-		//Anche qui due casi possibili, controlliamo se la readyQueue è vuota
-		if(clist_empty(readyQueue)){
-
-			//processCount = 0 -> HALT -> non ci sono processi
-			if(processCount == 0)
-				HALT();
-
-			//processCount>0 e SBC==0-> qualcosa è andato storto -> deadlock
-			if(processCount > 0 && softBlockCount == 0)
-				PANIC(); // potremmo anche fare altro...
-
-			//caso "normale" -> aspettiamo che un processo necessiti di essere allocato
-			if(processCount > 0 && softBlockCount > 0)
-				WAIT();
-
-			//ci va l'else? Quelli di Kaya non l'avevano messo
-			//qualsiasi altro stato
-			PANIC();
-
-		}
-
-		else{
-			//semplicemente carico il primo processo in memoria
-			//scherzavo, non è semplice
-
-			currentProcess = removeProcQ(readyQueue);
-
-			if(currentProcess == NULL) PANIC(); //qualcosa è andato storto
-
-			//imposta i timer e altre cose brutte
-
 			scheduler();
-		}
-	}
+
 
 }
 
@@ -142,9 +121,12 @@ void scheduler(){
 	}
 	if( current_process == NULL){
 		//devo attivare un processo in attesa
-		if( !list_empty(priority_queue(PRIO_HIGH))) current_process = removeProcQ(priority_queue(PRIO_HIGH));
-		else if( !list_empty(priority_queue(PRIO_NORM))) current_process = removeProcQ(priority_queue(PRIO_NORM));
-		else if( !list_empty(priority_queue(PRIO_LOW))) current_process = removeProcQ(priority_queue(PRIO_LOW));
+		if( !list_empty(priority_queue(PRIO_HIGH)))
+			current_process = removeProcQ(priority_queue(PRIO_HIGH));
+		else if( !list_empty(priority_queue(PRIO_NORM)))
+			current_process = removeProcQ(priority_queue(PRIO_NORM));
+		else if( !list_empty(priority_queue(PRIO_LOW)))
+			current_process = removeProcQ(priority_queue(PRIO_LOW));
 		else{
 			if( process_count == 0 ){	//non ci sono più processi e posso terminare
 				HALT();
