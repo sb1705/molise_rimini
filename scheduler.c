@@ -10,7 +10,7 @@ extern unsigned int processCount;
 extern unsigned int softBlockCount;
 
 //ultima partenza del time slice
-extern unsigned int last_slice_start = 0;
+unsigned int last_slice_start = 0;
 //per contare lo userTime del processo corrente
 unsigned int userTimeStart = 0;
 //per contare il CPUTime del processo corrente
@@ -19,6 +19,7 @@ unsigned int CPUTimeStart = 0;
 unsigned int pseudo_clock_start = 0;
 //quale dei due timer ( pseudo clock o time slice ) alzerà un interrupt per primo
 unsigned int current_timer;
+
 void scheduler(){
 
 	//Due possibili casi:
@@ -42,7 +43,7 @@ void scheduler(){
 		// non si capisce bene a che serve sto pseudoclock...
 
 
-		//setTIMER(MIN(SCHED_TIME_SLICE, SCHED_PSEUDO_CLOCK-timer));
+		setTIMER(MIN(SCHED_TIME_SLICE, SCHED_PSEUDO_CLOCK-timer));
 
 		//LDST(&(currentProcess->s_t));
 
