@@ -160,6 +160,9 @@ void sysBpHandler(){
   * @param statep : stato del processore da cui creare il nuovo processo.
   * @return Restituisce -1 in caso di fallimento, mentre il PID (valore maggiore o uguale a 0) in caso di avvenuta creazione.
  */
+
+
+ // questa funzione è sbagliata perchè non dobbiamo ritornare il pid! Vedi quelli dell'anno scorso
 int createProcess(state_t *statep){
 	int i;
 	pcb_t *p;
