@@ -1,0 +1,110 @@
+10/8
+
+Stiamo facendo la SYS3 e ci viene richiesto di vedere di quante risorse ha bisogno
+il primo processo bloccato, quindi noi abbiamo messo un campo 
+in più nel pcb per salvare quante risorse chiede.
+Quando liberiamo risorse (weight > 0) usiamo la headBlocked per avere il 
+puntatore al primo processo bloccato sul semaforo, controlliamo se le risorse
+richieste da questo processo sono meno o uguali a quelle che abbiamo appena
+liberato e, se questo è il caso, lo sblocchiamo {abbiamo tolto il cast che
+avevano fatto quelli dell'anno scorso, nel caso non funziona rimettiamolo}
+
+
+Per la sys3 usiamo la variabile/parametro currentProcess, questo ovviamente
+identifica il processo corrente che è stato inizializzato con la sys1 che è
+la createProcess. Quindi ora ci mettiamo a fare la sys1 (Olga vai a vedere la
+STST tra la documentaione di uArm)
+
+
+
+11/8
+
+Stiamo facendo la createProcess e dopo un lungo dibattito abbiamo deciso di 
+fare il pid uguale a come lo hanno fatto gli altri, però a Olga non piace 
+tanto questa idea.... Stiamo sempre a cambiare i cast da U32 a unsignd int 
+se poi non funziona li ricambiamo. Notare che la SYSCALL ci mette per bene
+(si spera) lo stato del processore al momento attuale nel registro a2, che 
+poi noi mettiamo in argv1 per usarlo nella nostra createProcess
+
+Vogliamo iniziare a fare il test quindi faccimo anche la SYS2 
+(TerminateProcess). Nelle specifiche dice di terminare il processo chiamante 
+quando la syscall è chiamata con parametro 0, che succede però se la 
+chiamo con il mio stesso pid? Da errore? Funziona lo stesso?
+Qui i tipi fanno una cosa dello pseudoclock... noi ancora non vediamo niente 
+di sta roba quindi lo abbiamo commentato. 
+Non sappiamo bene se riutilizzando funzioni già fatte in exceptions.c 
+le dobbiamo chaimare come SYSCALL o come una semplice funzione.
+Quando dobbiamo uccidere un processo, dobiamo toglierlo dalla lista dei figli 
+dei suoi genitori. Cosa succede se il processo non ha genitori?
+Il caso corretto di un processo senza genitore è quando il processo è 
+il primo processo creato (nel nostro caso il primo processo è il test),
+e dal test vediamo che per terminare correttamente il primo processo
+va sollevata una trap e non va usata la syscall terminateProcess, quidni 
+va bene usare come caso di errore il fatto che la outChild dia NULL.
+
+Abbiamo provato a modificare velocemente il MakeFile perché volevamo
+iniziare un po a testarlo ma non avevamo ancora visto la scheduler quindi 
+dobbiamo vedre prima lo scheduler e poi si può iniziare
+
+17/8
+
+Stiamo facendo lo scheduler, per ora diamouna passata veloce ma potremmo 
+gestire i deadlock in modo diverso.
+
+Sara ha trovato un progetto dell'anno scorso che ha più snso di quello che
+facevamo prima, quindi ora copiamo da loro. Per ora l'idea che abbiamo preso 
+è che se il current process != NULL noi lo mettiamo nella ready queue
+e poi mettiamo current process = NULL questo perché è lo scheduler che deve
+decidere se il processo che abbiamo ora è quello che dobbiamo eseguire, o ce
+ne è un altro che ha più diritto di lui a essere eseguito
+
+Siamo arrivate alla conclusione che Olga aveva ragione a non fidarsi di quelli
+da cui copiavamo prima u.u
+
+19/8
+SCHEDULER
+
+Lo scheduler che avevamo fatto insieme alla fine richiamava lo scheduler, ma
+secondo me non ha senso, lo scheduler va chiamato solo quando serve.
+
+Un processo viene messo nella coda ready quando:
+1- è appena stato creato e vuole iniziare il suo lavoro
+2- c'è stato un interrupt (quando finisci di gestire l'interrupt vai rimesso
+   ready
+3- Ho finito operazione i/o
+
+Quindi basta assicurarsi che ognuna di queste operazioni metta il current
+process nella coda ready e poi metta a null il processo corrente. Se 
+il lo scheduler è stato chiamato alla fine di una systemcall o qualsiasi 
+altra operazione non bloccante allora il current process non sarà diverso
+da null e se quindi il timeslice non è ancora finito allora quel processo
+deve continuare a fare le sue cose, sennò se ne occuperà l'interrupt del
+timeslice (quello mandato dall'intervall timer) che metterà il processo in 
+ready e current process a null per poi richiamare lo scheduler.
+
+Lo scheduler per prima cosa quidni vede se è finito il timeslise del 
+processo, se non è finito ma entro con un currentProces==NULL (questo 
+vuol dire che volgio prendere un nuovo processo dalla coda ready) allora
+devo settare un nuovo timeslice, se non era finito ma ho un processo
+che non aveva ragione di essere bloccto, metto l'interval timer alla
+fine del suo time slice (o pseudo clokck).  
+
+
+AGGIUSTAMENTI
+
+Mi sono letta queste cose (http://stackoverflow.com/questions/1433204/how-do-i-use-extern-to-share-variables-between-source-files-in-c)
+che ti spiegano bene come usre le variabili globali quando hai tanti
+moduli, quindi ora sto mettendo le cose a posto seguendo la logica spiegata
+lì, perciò ho fatto un initial.h. Ora cerco di mettere ordine nell'initial.c
+per renderlo più coerente allo scheduler appena finito
+
+SYSTEMCALL
+
+Sto rivedendo le system call e ho trovato dei problemi nella createProcess.
+In primis, noi inizializziamo il processo con lo stato corrente del 
+processore, ma questo è sbagliato, dovremmo inizializzarlo con il parametro
+passato come argomento, correggo facendo una funzione (definita in initial)
+che copia uno stato in un altro stato.
+Devo vedermi un po' l'aritmetica dei puntatroi perché prorpio non capisco
+quando devo mettere e quando non mettere la &, è troppo complicato
+il lavoro per provere e sperare di aver fatto bene 

@@ -8,9 +8,6 @@
 #include <uARMconst.h>
 
 
-#define HIDDEN static
-//serve per differenziare private da persistent (pag.84, pdf pag 96 uARM)
-
 /* definizione della struttura state_t preso dal manuale uARM
  typedef struct{
 	 unsigned int a1; //r0
@@ -42,8 +39,35 @@
 //inclusione del test -> è scritto nelle specifiche di metterlo
 extern void test();
 
-//memaddr è un tipo di dato unsigned int definito in const.h
-HIDDEN void populate(memaddr area, memaddr handler){
+//variabili globali
+
+clist readyQueue; //pointer to a queue of pcb?? è una clist?? -> si, perchè quando facciamo insertProcB mettiamo una clist e un pcb
+pcb_t *currentProcess;
+unsigned int processCount; //è giusto farli int?
+unsigned int softBlockCount;
+unsigned int pidCounter;
+// struttura per i pcb attivi
+pid_s active_pcb[MAXPROC];
+
+//semafori per i device -> NB per il terminale sono due
+//i semafori a loro volta hanno 8 indici, uno per ogni linea di interrupt -> perchè? -> intanto io metto solo a semplicei int
+
+//for interrupt lines 3-7 the Interrupting Devices Bit Map, as defined in the μARM informal specifications document, will indicate which devices on each of these interrupt lines have a pending interrupt. -> quindi si devono avere 8 indici -> non ho voglia di modificare ora ->modificato
+
+//#define DEV_PER_INT 8
+
+//i vari semafori
+int disk[DEV_PER_INT];
+int tape[DEV_PER_INT];
+int network[DEV_PER_INT];
+int printer[DEV_PER_INT];
+int termTrasmitter[DEV_PER_INT];
+int termReceiver[DEV_PER_INT];
+int pseudoClock; //è un semaforo
+
+
+//funzione che inizializza un'area con il gestore passato come parametro
+void populate(memaddr area, memaddr handler){ //memaddr è un tipo di dato unsigned int definito in const.h
 
 	//creo la nuova area
 	state_t *newArea;
@@ -77,45 +101,35 @@ HIDDEN void populate(memaddr area, memaddr handler){
 }
 
 
-
-//variabili globali
-
-clist readyQueue; //pointer to a queue of pcb?? è una clist?? -> si, perchè quando facciamo insertProcB mettiamo una clist e un pcb
-
-pcb_t *currentProcess;
-
-unsigned int processCount; //è giusto farli int?
-
-unsigned int softBlockCount;
-
-unsigned int pidCounter;
-
-// struttura per i pcb attivi
-pid_s active_pcb[MAXPROC];
-
-//semafori per i device -> NB per il terminale sono due
-//i semafori a loro volta hanno 8 indici, uno per ogni linea di interrupt -> perchè? -> intanto io metto solo a semplicei int
-
-//for interrupt lines 3-7 the Interrupting Devices Bit Map, as defined in the μARM informal specifications document, will indicate which devices on each of these interrupt lines have a pending interrupt. -> quindi si devono avere 8 indici -> non ho voglia di modificare ora ->modificato
-
-//#define DEV_PER_INT 8
-
-int disk[DEV_PER_INT];
-int tape[DEV_PER_INT];
-int network[DEV_PER_INT];
-int printer[DEV_PER_INT];
-int termTrasmitter[DEV_PER_INT];
-int termReceiver[DEV_PER_INT];
-
-//altre variabili
-
-int pseudoClock; //è un semaforo
-unsigned int timer; //è quello dei 100 millisecondi
-unsigned int last_access;
+//copia lo stato da from a to
+void copyState(state_t *from, state_t *to){	
+	to->a1 = from->a1;
+	to->a2 = from->a2;
+	to->a3 = from->a3;
+	to->a4 = from->a4;
+	to->v1 = from->v1;
+	to->v2 = from->v2;
+	to->v3 = from->v3;
+	to->v4 = from->v4;
+	to->v5 = from->v5;
+	to->v6 = from->v6;
+	to->sl = from->sl;
+	to->fp = from->fp;
+	to->ip = from->ip;
+	to->sp = from->sp;
+	to->lr = from->lr;
+	to->pc = from->pc;
+	to->cpsr = from->cpsr;
+	to->CP15_Control = from->CP15_Control;
+	to->CP15_EntryHi = from->CP15_EntryHi;
+	to->CP15_Cause = from->CP15_Cause;
+	to->TOD_Hi = from->TOD_Hi;
+	to->TOD_Low = from->TOD_Low;
+}
 
 
-int main()
-{
+int main(){
+
 	pcb_t *first;
 
 	// ----1----
@@ -156,7 +170,6 @@ int main()
 	currentProcess = NULL;
 	processCount = 0;
 	softBlockCount = 0;
-
 	pidCounter = 0;
 
 
@@ -169,8 +182,7 @@ int main()
 	// ----4----
 
 	//Initialize all nucleus maintained semaphores. In addition to the above nucleus variables, there is one semaphore variable for each external (sub)device in μARM, plus a semaphore to represent a pseudo-clock timer. Since terminal devices are actually two independent sub-devices (see Section 5.7- pops), the nucleus maintains two semaphores for each terminal device. All of these semaphores need to be initialized to zero.
-	for(i=0; i<DEV_PER_INT; i++)
-	{
+	for(i=0; i<DEV_PER_INT; i++){
 		disk[i] = 0;
 		tapes[i] = 0;
 		network[i] = 0;
@@ -178,7 +190,6 @@ int main()
 		termTrasmitter[i] = 0;
 		termReceiver[i] = 0;
 	}
-
 	pseudoClock = 0;
 
 
@@ -199,7 +210,6 @@ int main()
 	first->p_s.pc = (memaddr)test;
 
 
-	//dove sta il local timer???? -> non c'è
 
 	insertProcQ(&readyQueue, first);
 	processCount++; //Sara lo vuole mettere direttamente in allocPcb()
@@ -207,11 +217,6 @@ int main()
 	// ----6----
 
 	// Call the scheduler.
-
-	last_access=getTODLO();
-	timer=0;
-
-	//credo dovremmo fare altre cose qua nel mezzo
 	scheduler();
 
 	return 0;

@@ -1,5 +1,6 @@
 #include "asl.e"
 #include "pcb.h"
+#include "initial.h"
 
 #include <libuarm.h>
 
@@ -162,35 +163,36 @@ void sysBpHandler(){
  */
 
 
- // questa funzione è sbagliata perchè non dobbiamo ritornare il pid! Vedi quelli dell'anno scorso
+ // nell'endeler il valore di ritorno di questa funzione verrà salvato nel registro giusto
 int createProcess(state_t *statep){
 	int i;
-	pcb_t *p;
+	pcb_t *newp;
 
 	/* In caso non ci fossero pcb liberi, restituisce -1 */
-	if((p = allocPcb()) == NULL)
+	if((newp = allocPcb()) == NULL)
 		return -1;
 	else {
-		/* Carica lo stato del processore in quello del processo */
-		STST(&(p->p_s)); //Speriamo vada bene...
+		/* inizializzo lo stato del nuovo processo con quello del padre */
+
+		copyState(statep, &newp->p_s); //non sono sicura che ci voglia o meno il &
 
 		/* Aggiorna il contatore dei processi e il pidCounter (progressivo) */
 		processCount++;
 		pidCounter++;
-		p->p_pid = pidCounter;
+		newp->p_pid = pidCounter;
 
 		/* Ricerca una cella vuota della tabella active_pcb in cui inserire il processo appena creato */
 		for(i=0; i<MAXPROC; i++)
 			if(active_pcb[i].pid == 0) break;
 
 		/* Aggiorna la tabella dei pcb utilizzati, assegnando il giusto pid e il puntatore al pcb del processo creato */
-		active_pcb[i].pid = p->p_pid;
-		active_pcb[i].pcb = p;
+		active_pcb[i].pid = newp->p_pid;
+		active_pcb[i].pcb = newp;
 
-		/* p diventa un nuovo figlio del processo chiamante */
-		insertChild(currentProcess, p);
+		/*newp diventa un nuovo figlio del processo chiamante */
+		insertChild(currentProcess, newp);
 
-		insertProcQ(&readyQueue, p);
+		insertProcQ(&readyQueue, newp);
 
 		return pidCounter;
 	}
