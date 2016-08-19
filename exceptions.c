@@ -11,19 +11,19 @@ HIDDEN state_t *sysBp_old = (state_t *) SYSBK_OLDAREA; //Cos'è???
 
 //funzione per inizializzare il pid
 
-int newPid (pcb_t *proc){
+pid_t newPid (pcb_t *proc){
 	int i=0;
 	while ( i < MAXPROC ) {
 		if (active_pcb[i]==NULL){
 			active_pcb[i]= proc;
-			proc->p_pid=i;
+			proc->p_pid=i+1;
 			break;
 		}
 		i++;
 	}
 	if (i >= MAXPROC) //ci sono più pricessi di quanti ne posso avere
 		PANIC();
-	return i;
+	return i+1;
 }
 
 void sysBpHandler(){
@@ -80,8 +80,8 @@ void sysBpHandler(){
 					break;
 
 				case TERMINATEPROCESS:
-					//ris = terminateProcess((int) arg1);
-					//if(currentProcess != NULL) currentProcess->p_state.reg_v0 = ris;
+					ris = terminateProcess((int) arg1);
+					if(currentProcess != NULL) currentProcess->p_state.reg_v0 = ris;
 					break;
 
 				case SEMOP:
@@ -181,7 +181,7 @@ void sysBpHandler(){
 
  // nell'endeler il valore di ritorno di questa funzione verrà salvato nel registro giusto
 int createProcess(state_t *statep){
-	int pid;
+	pid_t pid;
 	pcb_t *newp;
 
 	/* In caso non ci fossero pcb liberi, restituisce -1 */
@@ -224,16 +224,12 @@ int terminateProcess(int pid){
 		isSuicide = TRUE;
 	}
 
-	/* Cerca nella tabella dei pcb usati quello da rimuovere */
-	for(i=0; i<MAXPROC; i++){
-		if(pid == active_pcb[i].pid){
-			pToKill = active_pcb[i].pcb;
-			break;
-		}
-	}
+	/* Recupera nella tabella dei pcb usati quello da rimuovere */
+	pToKill = active_pcb[pid-1]; //ancora non so come fare con i puntatori
 
 	/* Se si cerca di uccidere un processo che non esiste, restituisce -1 */
-	if(pToKill == NULL) return -1;
+	if(pToKill == NULL)
+		return -1;
 
 	/* Se il processo è bloccato su un semaforo esterno, incrementa questo ultimo */
 	if(pToKill->p_cursem != NULL){
@@ -251,16 +247,16 @@ int terminateProcess(int pid){
 	/* Se il processo da uccidere ha dei figli, li uccide ricorsivamente */
 	while(emptyChild(pToKill) == FALSE){
 		pChild = removeChild(pToKill);
-		if((terminateProcess(pChild->p_pid)) == -1) return -1;
+		if((terminateProcess(pChild->p_pid)) == -1)
+			return -1;
 	}
 
 	/* Uccide il processo */
 	if((pToKill = outChild(pToKill)) == NULL) // scolleghiamo il processo dal suo genitore
 		return -1;
 	else{
-		/* Aggiorna la tabella dei pcb usati */
-		pcbused_table[i].pid = 0;
-		pcbused_table[i].pcb = NULL;
+		/* Aggiorna la tabella dei pcb attivi */
+		active_pcb[pid-1] = NULL;
 
 		freePcb(pToKill);
 	}
