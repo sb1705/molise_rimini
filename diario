@@ -108,3 +108,50 @@ che copia uno stato in un altro stato.
 Devo vedermi un po' l'aritmetica dei puntatroi perché prorpio non capisco
 quando devo mettere e quando non mettere la &, è troppo complicato
 il lavoro per provere e sperare di aver fatto bene 
+
+ASSEGNARE IL PID
+
+Ok, non capisco niente di come stiamo facendo i pid, quidni ho pensato di fare
+così: 
+ Abbiamo l'array dei pcb attivi (active_pcb) e il pid del processo è il
+primo indice libero in quell'array. Poi salvo nella struttura dei pcb il 
+pid, così se ho il pcb per recuperare il pid basta andare al campo dove
+salvi il pid, se ho il pid basta andare un active_pcb[pid] per trovare 
+il pcb  
+(possiamo provare un algoritmo un po' più complicato ma per ora a me piace
+questo)
+
+Ho fatto nelle exceptions.c una funzione (newPid) che calcola il nuovo
+pid e salva il processo nei processi attivi salvando il pid nel campo
+giusto, anche qui non so se con i puntatori ho fatto bene.
+
+Ho scoperto che ci stava un types definito dal prof che non avevamo 
+ancora scaricato o visto dove nel pcb c'è lo spazio per il pid (-.-'')
+
+Nella terminate se passo 0 vuol dire che è il processo chiamante a uccidersi, 
+e visto che il parametro è in teoria il pid del processo non posso usare 0
+come pid di nessun processo, quindi il pid dei processi saranno la 
+loro posizione nell'array+1, quindi ricordati di fare pid-1 quando
+vuoi accedere al pcd dal pid
+
+
+REVISIONE TERMINATE PROCESS
+
+Sono andata a vedere nel pdf di fase due che ti dice di aggiustare il semforo
+se era negativo, MA dice di non aggiustarlo se il semaforo è un semaforo 
+di device...ora, non capisco... i semaphori non si riferiscono solo ai 
+device? Cosa mi sfugge?
+Ok, penso che volendo puoi usare semafori che non siano utilizzati per i
+device, ma : come faccio a capire se sono bloccato su un semaforo di 
+device o qualunque altro semaforo?
+
+Ok, ho capito, non lo faccio ora perché devo uscire con mia cugina ma, pensavo
+che per vedere se un processo è bloccato su un device devo controllare
+se è bloccato in ognuno degli array dei semafori dei device, quidni 
+pensavo di fare un array bidimensionale per i device così è più facile 
+accedervi nel programma così che poi l'indice nell'array corrisponde alla
+linea dell'interrupt (leggiti bene come funzionano queste cose e 
+aggiusta di conseguenza).
+Altra cosa che vorrei poter fare è salvarmi quante risorse ho chiesto non 
+nel pcb, perché ora che ho trovato il pcb dove era già messo il pid
+sono non mi piace aggiungere cose al pcb 

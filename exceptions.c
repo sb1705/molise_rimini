@@ -9,6 +9,22 @@ HIDDEN state_t *sysBp_old = (state_t *) SYSBK_OLDAREA; //Cos'è???
 
 // ---- implementa qui le syscall
 
+//funzione per inizializzare il pid
+
+int newPid (pcb_t *proc){
+	int i=0;
+	while ( i < MAXPROC ) {
+		if (active_pcb[i]==NULL){
+			active_pcb[i]= proc;
+			proc->p_pid=i;
+			break;
+		}
+		i++;
+	}
+	if (i >= MAXPROC) //ci sono più pricessi di quanti ne posso avere
+		PANIC();
+	return i;
+}
 
 void sysBpHandler(){
 
@@ -165,7 +181,7 @@ void sysBpHandler(){
 
  // nell'endeler il valore di ritorno di questa funzione verrà salvato nel registro giusto
 int createProcess(state_t *statep){
-	int i;
+	int pid;
 	pcb_t *newp;
 
 	/* In caso non ci fossero pcb liberi, restituisce -1 */
@@ -174,27 +190,16 @@ int createProcess(state_t *statep){
 	else {
 		/* inizializzo lo stato del nuovo processo con quello del padre */
 
-		copyState(statep, &newp->p_s); //non sono sicura che ci voglia o meno il &
+		copyState(&newp->p_s, statep); //non sono sicura che ci voglia o meno il &
 
 		/* Aggiorna il contatore dei processi e il pidCounter (progressivo) */
 		processCount++;
-		pidCounter++;
-		newp->p_pid = pidCounter;
-
-		/* Ricerca una cella vuota della tabella active_pcb in cui inserire il processo appena creato */
-		for(i=0; i<MAXPROC; i++)
-			if(active_pcb[i].pid == 0) break;
-
-		/* Aggiorna la tabella dei pcb utilizzati, assegnando il giusto pid e il puntatore al pcb del processo creato */
-		active_pcb[i].pid = newp->p_pid;
-		active_pcb[i].pcb = newp;
-
+		pid=newPid(statep);
 		/*newp diventa un nuovo figlio del processo chiamante */
 		insertChild(currentProcess, newp);
-
 		insertProcQ(&readyQueue, newp);
 
-		return pidCounter;
+		return pid;
 	}
 }
 

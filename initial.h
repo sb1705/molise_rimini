@@ -12,10 +12,10 @@ extern unsigned int softBlockCount;
 //A pointer to a ProcBlk that represents the current executing process.
 extern pcb_t *currentProcess;
 // struttura per i pcb attivi
-extern pid_s active_pcb[MAXPROC];
+extern pcb_t active_pcb[MAXPROC];
 
 
-//copia lo stato da from a to
-void copyState(state_t *from, state_t *to);
+//copia lo stato da src a dest
+void copyState(state_t *dest, state_t *src);
 
 #endif

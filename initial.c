@@ -45,9 +45,8 @@ clist readyQueue; //pointer to a queue of pcb?? è una clist?? -> si, perchè qu
 pcb_t *currentProcess;
 unsigned int processCount; //è giusto farli int?
 unsigned int softBlockCount;
-unsigned int pidCounter;
 // struttura per i pcb attivi
-pid_s active_pcb[MAXPROC];
+pcb_t active_pcb[MAXPROC];
 
 //semafori per i device -> NB per il terminale sono due
 //i semafori a loro volta hanno 8 indici, uno per ogni linea di interrupt -> perchè? -> intanto io metto solo a semplicei int
@@ -101,30 +100,30 @@ void populate(memaddr area, memaddr handler){ //memaddr è un tipo di dato unsig
 }
 
 
-//copia lo stato da from a to
-void copyState(state_t *from, state_t *to){	
-	to->a1 = from->a1;
-	to->a2 = from->a2;
-	to->a3 = from->a3;
-	to->a4 = from->a4;
-	to->v1 = from->v1;
-	to->v2 = from->v2;
-	to->v3 = from->v3;
-	to->v4 = from->v4;
-	to->v5 = from->v5;
-	to->v6 = from->v6;
-	to->sl = from->sl;
-	to->fp = from->fp;
-	to->ip = from->ip;
-	to->sp = from->sp;
-	to->lr = from->lr;
-	to->pc = from->pc;
-	to->cpsr = from->cpsr;
-	to->CP15_Control = from->CP15_Control;
-	to->CP15_EntryHi = from->CP15_EntryHi;
-	to->CP15_Cause = from->CP15_Cause;
-	to->TOD_Hi = from->TOD_Hi;
-	to->TOD_Low = from->TOD_Low;
+//copia lo stato da src a dest
+void copyState(state_t *dest, state_t *src){
+	dest->a1 = src->a1;
+	dest->a2 = src->a2;
+	dest->a3 = src->a3;
+	dest->a4 = src->a4;
+	dest->v1 = src->v1;
+	dest->v2 = src->v2;
+	dest->v3 = src->v3;
+	dest->v4 = src->v4;
+	dest->v5 = src->v5;
+	dest->v6 = src->v6;
+	dest->sl = src->sl;
+	dest->fp = src->fp;
+	dest->ip = src->ip;
+	dest->sp = src->sp;
+	dest->lr = src->lr;
+	dest->pc = src->pc;
+	dest->cpsr = src->cpsr;
+	dest->CP15_Control = src->CP15_Control;
+	dest->CP15_EntryHi = src->CP15_EntryHi;
+	dest->CP15_Cause = src->CP15_Cause;
+	dest->TOD_Hi = src->TOD_Hi;
+	dest->TOD_Low = src->destD_Low;
 }
 
 
@@ -170,12 +169,11 @@ int main(){
 	currentProcess = NULL;
 	processCount = 0;
 	softBlockCount = 0;
-	pidCounter = 0;
+
 
 
 	/* Inizializzazione della tabella dei pcb utilizzati */
 	for(i=0; i<MAXPROC; i++){
-			active_pcb[i].pid = 0;
 			active_pcb[i].pcb = NULL;
 	}
 
