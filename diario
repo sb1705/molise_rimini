@@ -155,3 +155,47 @@ aggiusta di conseguenza).
 Altra cosa che vorrei poter fare è salvarmi quante risorse ho chiesto non 
 nel pcb, perché ora che ho trovato il pcb dove era già messo il pid
 sono non mi piace aggiungere cose al pcb 
+
+20/8
+
+SEMAFORI
+
+Per i device abbiamo che ci possiamo accedere specificando la linea 
+dell'interrupt a cui è collegato e a quale specifico device facciamo 
+riferimento, quindi per quello che capisco a senso fare un array di due
+dimensioni dove la prima dimensione indica la linea di interrupt (e per 
+questo la grandezza è DEV_USED_INTS) e la seconda il device (e quidni di 
+dimensione DEV_PER_INT). Ho fatto il +1 nella prima dimensione dell'array
+perché in teoria il terminal è visto come due diversi device anche se
+ancora non capisco bene come funziona questa cosa. Bisogna ricordarsi, però
+che (in teoria) con la line 3 tu vuoi accedere all'array con indice 0 (il 
+semaforo del clock vuole la linea 2), quidni quando fai la sys10 vedi di 
+ricordarti sta cosa.
+
+TERMINATE PROCESS
+
+Ho fatto una funzione per vedere se il semaforo è bloccato sul semaforo di 
+device. L'ho fatta diventare void perché nelle nostre specifiche non dice
+di restituire niente e quindi io non restituisco
+
+SYS3
+
+Con sara ci chiedevamo dove vedere quante risorse voleva un processo e 
+quindi li avevamo messi nei pcb, questa cosa non mi piace, per ora la lascio
+così ma pensavo di fare un semplice array dove salvarlo (indicizzato con i pid
+quindi dal pid del processo posso subito recuperare da quell'array quante
+risorse vuole)
+Questa non l'ho modificata, bisogna vedere se funziona con il test, se non
+funziona ci pensiamo lì
+
+
+SYSHANDLER
+
+Sto rivedendo l'intero hendler e noi avevamo fatto questa cosa strana
+mode= ((sysBp_old->cpsr & STATUS_SYS_MODE) >> 0x3);
+per vedere in che mode eravamo ma secondo me è sbagliato, secondo me
+basta fare & con la maschera impostata dalle costanti di davoli (che ho 
+quello che ho fatto, poi vediamo facendo il test).
+Ok, più volte nelle specifiche ci dice di lavorare con lo user time e cpu
+time, ma non abiamo dove metterlo... (me ne sono accorta solo ora), dobbiamo
+aggiungere un altro campo nel pcb?

@@ -26,46 +26,52 @@ pid_t newPid (pcb_t *proc){
 	return i+1;
 }
 
-void sysBpHandler(){
+//vedere se è su semaforo
+int onSem (pcb_t *pcb){
+	return (pcb->p_cursem != NULL);
+}
 
-	int cause;
-	int mode;
-
-	//1-dovremmo salvare lo stato del registro
-
-	//2-boh -> il tipo dice per evitare loop syscall :/
-	currentProcess->p_s.cpsr += //qualcosa;
-
-	//3-prendiamo il mode
-	mode= ((sysBp_old->cpsr & STATUS_SYS_MODE) >> 0x3); //forse funziona -> STATUS_SYS_MODE in uarmConst.h
-
-	//4-cause interrupt
-	cause=getCAUSE();
-
-	if(cause == EXC_SYSCALL){ //caso system call
-
-		//controlla se è in user mode
-		if(mode==TRUE){ //è definito da qualche parte il true?
-
-			//controllo se è una delle 11 syscall
-			if((sysBp_old->reg_a0 >= 1) && (sysBp_old->reg_a0 <= SYSCALL_MAX)){ //SYSCALL_MAX sta in const.h
-
-				sysBp_old->CP15_Cause = setCAUSE(); //siamo sicuri non ci vadano parametri?
-
-				//salva il sysbp old in pgmtrap old
-
-				pgmTrapHandler();
-
-			}
-			else{
-				//ERRORE!!! FACCIAMO UN ALTRA VOLTA!!!
+//vedere se  è bloccato sul device
+int onDev (pcb_t *pcb){
+	int i,j;
+	if (onSem(pcb)){
+		for (i=0; i<=DEV_USED_INTS; i++){
+			for (j=0; j<DEV_PER_INT;j++){
+				if (semAdd==&devices[i][j]){
+					return TRUE;
+				}
 			}
 		}
-		else{//caso kernel mode
 
-			int ret;
+		if (semAdd==&pseudoClock) //non so se lo pseudoClock è considerato device
+			return TRUE;
+		//qui ci arriviamo se sono collegato a un semaforo ma non è device
+		return FALSE;
+	}
+
+	//qui ci arriviamo se non era su un semaforo to begin with
+	else return FALSE;
+
+}
+
+void sysBpHandler(){
+	state_t *sysBp_old = (state_t *) SYSBK_OLDAREA;
+	//non ho capito bene, ma in teoria quando fai la system call ti stora le cose nella old area e quindi tu metti gli stati della od area nel processo corrente, ma non so se va bene
+	copyState(&current_process->p_s, sysBp_old);
+	//Prendo la causa dell'eccezzione
+	int cause=getCAUSE();
+	//i tipi di cui mi fido di più fanno anche questo, noi quando proviamo commentiamolo e vediamo se funziona
+	cause = CAUSE_EXCCODE_GET(cause);
+
+	if(cause == EXC_SYSCALL){ //caso system call
+		//controlla di avere il permesso
+		if((currentProcess->p_s.cpsr & STATUS_SYS_MODE) == STATUS_SYS_MODE){
+			//sono in kernel mode quindi da qui faccio tutte le cose che devo fare
+			//essendo sicura di essere in kernel mode posso dire che è finito il tempo utente del processo. Dovrei farlo appena entrata nell'handler? Non cred perché potrei essere capitata qui anche in user mode, solo qui ho la sicurezza di essere in kernel mode
+			currentProcess->userTime += getTODLO() - userTimeStart;
 
 			/* Salva i parametri delle SYSCALL */
+			unsigned int sysc = sysBp_old->a1;
 			unsigned int argv1 = sysBp_old->a2;
 			unsigned int argv2 = sysBp_old->a3;
 			unsigned int argv3 = sysBp_old->a4;
@@ -73,15 +79,15 @@ void sysBpHandler(){
 
 
 			/* Gestisce ogni singola SYSCALL */
-			switch(sysBp_old->a1)
+			switch(sysc)
 			{
 				case CREATEPROCESS:
 					currentProcess->p_s.a1 = createProcess((state_t *) argv1); // se questo cast non funziona provare a fare argv1 di tipo U32
 					break;
 
 				case TERMINATEPROCESS:
-					ris = terminateProcess((int) arg1);
-					if(currentProcess != NULL) currentProcess->p_state.reg_v0 = ris;
+					terminateProcess((int) arg1);
+
 					break;
 
 				case SEMOP:
@@ -208,7 +214,7 @@ int createProcess(state_t *statep){
   * @param pid : identificativo del processo da terminare.
   * @return Restituisce 0 nel caso il processo e la sua progenie vengano terminati, altrimenti -1 in caso di errore.
  */
-int terminateProcess(int pid){
+void terminateProcess(int pid){
 	int i;
 	pcb_t *pToKill;
 	pcb_t *pChild;
@@ -229,10 +235,11 @@ int terminateProcess(int pid){
 
 	/* Se si cerca di uccidere un processo che non esiste, restituisce -1 */
 	if(pToKill == NULL)
-		return -1;
+		PANIC(); //qui ritornava -1 ma visto che io non faccio ritornare mando in PANIC in caso di errore
 
-	/* Se il processo è bloccato su un semaforo esterno, incrementa questo ultimo */
-	if(pToKill->p_cursem != NULL){
+	/* Se il processo è bloccato su un semaforo che non è un device, incrementa questo ultimo. Nel caso sia un device dicono le specifiche che se ne deve occupare il gestore dell'interrupt */
+	if(onSem(pToKill)){
+		if(!onDev(pToKill)){
 
 		/* Incrementa il semaforo e aggiorna questo ultimo se vuoto */
 		semaphoreOperation ((int)&pToKill->p_cursem, pToKill->p_resource);
@@ -240,20 +247,28 @@ int terminateProcess(int pid){
 
 		if (pToKill == NULL)
 			PANIC();
+		}else{
+			//qui sono bloccato su un semaforo che è un device quindi un processo era bloccato su semafori di Device vuol dire che aspettavo qualche interrupt quindi, eliminando questo processo devo diminuire il conteggio dei softBlockCount, non sono sicura però che devo farlo qui e non nell'interrupt hendler direttamente ma per ora lo metto qui
+			softBlockCount--;
+		}
 	}
-	/* Se invece è bloccato sul semaforo dello pseudo-clock, si incrementa questo ultimo
-	else if(pToKill->p_isOnDev == IS_ON_PSEUDO) pseudo_clock++;*/
+
+
+
+
 
 	/* Se il processo da uccidere ha dei figli, li uccide ricorsivamente */
 	while(emptyChild(pToKill) == FALSE){
 		pChild = removeChild(pToKill);
-		if((terminateProcess(pChild->p_pid)) == -1)
-			return -1;
+		//qui non so come vedere se ci sono stati errori
+		//if((terminateProcess(pChild->p_pid)) == -1)
+		//	return -1; //ancora errore -->PANIC
+		terminateProcess(pChild->p_pid));
 	}
 
 	/* Uccide il processo */
 	if((pToKill = outChild(pToKill)) == NULL) // scolleghiamo il processo dal suo genitore
-		return -1;
+		PANIC(); //errore -->PANIC
 	else{
 		/* Aggiorna la tabella dei pcb attivi */
 		active_pcb[pid-1] = NULL;
@@ -261,11 +276,12 @@ int terminateProcess(int pid){
 		freePcb(pToKill);
 	}
 
-	if(isSuicide == TRUE) currentProcess = NULL;
+	if(isSuicide == TRUE)
+		currentProcess = NULL;
 
 	processCount--;
 
-	return 0;
+	//return 0;
 }
 
 
@@ -275,7 +291,9 @@ int terminateProcess(int pid){
 void semaphoreOperation (int *semaddr, int weight){
 
 	if (weight==0){
-		SYSCALL(TERMINATEPROCESS, SYSCALL(GETPID)); //vediamo se possiamo farlo
+		//avevamo messo questo ma secondo me non ha senso chiamare qui le system call in questo modo
+		//SYSCALL(TERMINATEPROCESS, SYSCALL(GETPID)); //vediamo se possiamo farlo
+		terminateProcess(0);
 	}
 	else{
 

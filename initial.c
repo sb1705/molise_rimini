@@ -56,12 +56,7 @@ pcb_t active_pcb[MAXPROC];
 //#define DEV_PER_INT 8
 
 //i vari semafori
-int disk[DEV_PER_INT];
-int tape[DEV_PER_INT];
-int network[DEV_PER_INT];
-int printer[DEV_PER_INT];
-int termTrasmitter[DEV_PER_INT];
-int termReceiver[DEV_PER_INT];
+int devices[DEV_USED_INTS+1][DEV_PER_INT];
 int pseudoClock; //è un semaforo
 
 
@@ -127,8 +122,9 @@ void copyState(state_t *dest, state_t *src){
 }
 
 
-int main(){
 
+int main(){
+	int i,j;
 	pcb_t *first;
 
 	// ----1----
@@ -180,13 +176,10 @@ int main(){
 	// ----4----
 
 	//Initialize all nucleus maintained semaphores. In addition to the above nucleus variables, there is one semaphore variable for each external (sub)device in μARM, plus a semaphore to represent a pseudo-clock timer. Since terminal devices are actually two independent sub-devices (see Section 5.7- pops), the nucleus maintains two semaphores for each terminal device. All of these semaphores need to be initialized to zero.
-	for(i=0; i<DEV_PER_INT; i++){
-		disk[i] = 0;
-		tapes[i] = 0;
-		network[i] = 0;
-		printer[i] = 0;
-		termTrasmitter[i] = 0;
-		termReceiver[i] = 0;
+	for(i=0; i<=DEV_USED_INTS; i++){
+		for (j=0; j<DEV_PER_INT; j++){
+			devices[i][j]=0;
+		}
 	}
 	pseudoClock = 0;
 
