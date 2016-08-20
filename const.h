@@ -28,7 +28,7 @@
 #define TERMINATEPROCESS 2
 #define SEMOP 3
 #define SPECSYSHDL 4
-#define SPECTLBHDL 5/Users/giuliozhou/Downloads/uarmdoc.pdf
+#define SPECTLBHDL 5
 #define SPECPGMTHDL 6
 #define EXITTRAP 7
 #define GETCPUTIME 8
@@ -61,7 +61,7 @@
 #define PGMTRAP_OLDAREA 0x7200
 #define SYSBK_NEWAREA 0x7380
 #define SYSBK_OLDAREA 0x7300
- 
+
  */
 
 #endif

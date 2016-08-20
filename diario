@@ -199,3 +199,29 @@ quello che ho fatto, poi vediamo facendo il test).
 Ok, più volte nelle specifiche ci dice di lavorare con lo user time e cpu
 time, ma non abiamo dove metterlo... (me ne sono accorta solo ora), dobbiamo
 aggiungere un altro campo nel pcb?
+Ok, voglio sapere come funziona la syscall perché non capisco: posiziona
+le cose nella old area e noi le dobbiamo recuperare da lì? dove sta scritto?
+Ho trovato questo scritto nel manuale di uarm:
+"Each time an exception is risen, the BIOS handlers will store the processor
+state before the exception into the proper Old area, perform other tasks where
+required (see sec. 2.5.2) and eventually load the processor state stored 
+in the corresponding New area. The New areas must be filled with valid
+processor states pointing to kernel level exception handlers by kernel 
+initialization stage."
+Forse è utile.
+Ho messo cosa fare nel caso si sia in user mode.
+Volevo fare anche l caso breakpoint ma centrava con la sys4, quindi provo
+a fare prima quella e poi torno a fare l'handler
+
+
+SYS4
+
+Non capisco quasi niente dalle specifiche. Ora cerco di popolare al newArea 
+che mi dice lui nel modo che mi dice lui. Quanto mi da sui nervi che dice
+"il kernel fa questo" "il nucleo fa quello", che vuol dire?!?!? Io che devo
+fare quando implemento la syscall?!?!? TT__TT 
+Questa è anche diversa da quelli di l'anno scorso quidni mi devo arrangiare.
+
+Ok, di questa ho scritto praticamente tutto quello che ho fatto nel codice.
+Sono stanca, per oggi basta (anche se le prossime due syscall dovrebbero 
+essere praticmente uguali a questa)

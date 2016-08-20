@@ -95,7 +95,7 @@ void sysBpHandler(){
 					break;
 
 				case SPECSYSHDL:
-
+					specifySysBpHandler((memaddr) argv1, (memaddr) argv2, (unsigned int) argv3);
 					break;
 
 				case SPECTLBHDL:
@@ -128,29 +128,6 @@ void sysBpHandler(){
 					break;
 
 
-				/*
-
-				case WAITIO:
-					currentProcess->p_state.reg_v0 = waitIO((int) arg1, (int) arg2, (int) arg3);
-					break;
-
-				case GETPPID:
-					currentProcess->p_state.reg_v0 = getPpid();
-					break;
-
-				case SPECTLBVECT:
-					specTLBvect((state_t *) arg1, (state_t *)arg2);
-					break;
-
-				case SPECPGMVECT:
-					specPGMvect((state_t *) arg1, (state_t *)arg2);
-					break;
-
-				case SPECSYSVECT:
-					specSYSvect((state_t *) arg1, (state_t *)arg2);
-					break;
-
-				 */
 
 				default:
 					/* Se non è già stata eseguita la SYS12, viene terminato il processo corrente */
@@ -172,8 +149,18 @@ void sysBpHandler(){
 			scheduler();
 
 		}
-	}
-	else{ //caso breakpoint
+		else if(currentProcess->p_s.cpsr & STATUS_USER_MODE) == STATUS_USER_MODE) ){//qui nel caso sono in user mode e provo a fare una syscall faccio come mi dicono le specifiche, copiando le old aree giuste e alzando una trap chiamando l'handler delle trap
+			if (sysc >= 1 && sysc <= SYSCALL_MAX){
+				state_t *pgmTrap_old = (state_t *) PGMTRAP_OLDAREA;
+				copyState(pgmTrap_old,sysBp_old);
+				//CAUSE_EXCCODE_SET definito in uARMconst
+				pgmTrap_old->CP15_Cause=CAUSE_EXCCODE_SET(pgmTrap_old->CP15_Cause, EXC_RESERVEDINSTR );
+				pgmTrapHandler();
+			}
+		}
+
+	}else if ( cause == EXC_BREAKPOINT ){ //caso breakpoint
+
 
 
 	}
@@ -332,7 +319,27 @@ void semaphoreOperation (int *semaddr, int weight){
 	}
 }
 
+//Specify Sys/BP Handler SYS4
+void specifySysBpHandler(memaddr argv1, memaddr argv2, unsigned int argv3){
 
+	if (currentProcess->p_excpvec[EXCP_SYS_NEW]==NULL){
+		state_t *sysBp_new = (state_t *) SYSBK_NEWAREA;
+		sysBp_new->pc=argv1;
+		sysBp_new->sp=argv2;
+		sysBp_new->cpsr=argv3; //questo non sono sicura di come fare visto che sono dei flag, forse ci sta qualcosa tra le costanti varie di uarm ma sono stanca, non mi va di cercare ora
+
+		//questo dovrebbe copiare l'asid del currentProcess in quello della newArea. le macro che ho usato sono sempre in uARMconst
+		sysBp_new->CP15_EntryHi=ENTRYHI_ASID_SET( sysBp_new->CP15_EntryHi, ENTRYHI_ASID_GET(currentProcess->p_s.CP15_EntryHi));
+
+
+		//ok, dovrei avere qualcosa per vedere se il processo ha già chiamato questa cosa e non ho la più pallida idea di come fare.
+		//L'idea che mi è venuta è di usare l'exception states vector che sta nel pcb. Se poi vedo che ha un'altra funzione penserò a qualcos'altro
+		currentProcess->p_excpvec[EXCP_SYS_NEW]=sysBp_new;
+
+	}else{ //visto che la sys4 settata il vettore delle ecezioni del currentProcess alla new area appena fatta se questo è !=NUll (come succede in questo ramo else), allora vuol dire che la sys4 questo processo l'aveva già chiamata quindi devo comportarmi di conseguenza come dicono le specifche
+		terminateProcess(0);
+	}
+}
 
 
 //Che palle... questi due fanno più o meno le stesse cose, cambia quale system call ha chiamato l'errore, per il primo SYS5 e il secondo SYS6
