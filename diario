@@ -292,6 +292,7 @@ exception.c
     scorso hanno fatto una funzione che sembra carina ma usa devSem che non so dove
     sia definita RIGUARDARE. Ah, ho appena visto che l'hai messa anche tu in exeptions.
     Ho cominciato a scrivere una funzione walk, per scorrere il sottoalbero di un
-    processo, però sto facendo casino con la lista dei fratelli e dei figli, la
-    finirò quando sono un po' più lucida. Sul libro di algoritmi c'è qualche
-    funzione per la ricerca su alberi non binari? il mio è a Bologna.
+    processo, forse ce l'ho fatta, riguarda anche tu quando hai tempo, non è una
+    cosa urgente. Ci ho messo un sacco perchè ho dovuto riguardare come funzionavano
+    le cose di phase0 e come le avevamo usate nella phase1, però credo di esserci
+    riuscita.
