@@ -1,9 +1,9 @@
 10/8
 
 Stiamo facendo la SYS3 e ci viene richiesto di vedere di quante risorse ha bisogno
-il primo processo bloccato, quindi noi abbiamo messo un campo 
+il primo processo bloccato, quindi noi abbiamo messo un campo
 in più nel pcb per salvare quante risorse chiede.
-Quando liberiamo risorse (weight > 0) usiamo la headBlocked per avere il 
+Quando liberiamo risorse (weight > 0) usiamo la headBlocked per avere il
 puntatore al primo processo bloccato sul semaforo, controlliamo se le risorse
 richieste da questo processo sono meno o uguali a quelle che abbiamo appena
 liberato e, se questo è il caso, lo sblocchiamo {abbiamo tolto il cast che
@@ -19,40 +19,40 @@ STST tra la documentaione di uArm)
 
 11/8
 
-Stiamo facendo la createProcess e dopo un lungo dibattito abbiamo deciso di 
-fare il pid uguale a come lo hanno fatto gli altri, però a Olga non piace 
-tanto questa idea.... Stiamo sempre a cambiare i cast da U32 a unsignd int 
+Stiamo facendo la createProcess e dopo un lungo dibattito abbiamo deciso di
+fare il pid uguale a come lo hanno fatto gli altri, però a Olga non piace
+tanto questa idea.... Stiamo sempre a cambiare i cast da U32 a unsignd int
 se poi non funziona li ricambiamo. Notare che la SYSCALL ci mette per bene
-(si spera) lo stato del processore al momento attuale nel registro a2, che 
+(si spera) lo stato del processore al momento attuale nel registro a2, che
 poi noi mettiamo in argv1 per usarlo nella nostra createProcess
 
-Vogliamo iniziare a fare il test quindi faccimo anche la SYS2 
-(TerminateProcess). Nelle specifiche dice di terminare il processo chiamante 
-quando la syscall è chiamata con parametro 0, che succede però se la 
+Vogliamo iniziare a fare il test quindi faccimo anche la SYS2
+(TerminateProcess). Nelle specifiche dice di terminare il processo chiamante
+quando la syscall è chiamata con parametro 0, che succede però se la
 chiamo con il mio stesso pid? Da errore? Funziona lo stesso?
-Qui i tipi fanno una cosa dello pseudoclock... noi ancora non vediamo niente 
-di sta roba quindi lo abbiamo commentato. 
-Non sappiamo bene se riutilizzando funzioni già fatte in exceptions.c 
+Qui i tipi fanno una cosa dello pseudoclock... noi ancora non vediamo niente
+di sta roba quindi lo abbiamo commentato.
+Non sappiamo bene se riutilizzando funzioni già fatte in exceptions.c
 le dobbiamo chaimare come SYSCALL o come una semplice funzione.
-Quando dobbiamo uccidere un processo, dobiamo toglierlo dalla lista dei figli 
+Quando dobbiamo uccidere un processo, dobiamo toglierlo dalla lista dei figli
 dei suoi genitori. Cosa succede se il processo non ha genitori?
-Il caso corretto di un processo senza genitore è quando il processo è 
+Il caso corretto di un processo senza genitore è quando il processo è
 il primo processo creato (nel nostro caso il primo processo è il test),
 e dal test vediamo che per terminare correttamente il primo processo
-va sollevata una trap e non va usata la syscall terminateProcess, quidni 
+va sollevata una trap e non va usata la syscall terminateProcess, quidni
 va bene usare come caso di errore il fatto che la outChild dia NULL.
 
 Abbiamo provato a modificare velocemente il MakeFile perché volevamo
-iniziare un po a testarlo ma non avevamo ancora visto la scheduler quindi 
+iniziare un po a testarlo ma non avevamo ancora visto la scheduler quindi
 dobbiamo vedre prima lo scheduler e poi si può iniziare
 
 17/8
 
-Stiamo facendo lo scheduler, per ora diamouna passata veloce ma potremmo 
+Stiamo facendo lo scheduler, per ora diamouna passata veloce ma potremmo
 gestire i deadlock in modo diverso.
 
 Sara ha trovato un progetto dell'anno scorso che ha più snso di quello che
-facevamo prima, quindi ora copiamo da loro. Per ora l'idea che abbiamo preso 
+facevamo prima, quindi ora copiamo da loro. Per ora l'idea che abbiamo preso
 è che se il current process != NULL noi lo mettiamo nella ready queue
 e poi mettiamo current process = NULL questo perché è lo scheduler che deve
 decidere se il processo che abbiamo ora è quello che dobbiamo eseguire, o ce
@@ -74,20 +74,20 @@ Un processo viene messo nella coda ready quando:
 3- Ho finito operazione i/o
 
 Quindi basta assicurarsi che ognuna di queste operazioni metta il current
-process nella coda ready e poi metta a null il processo corrente. Se 
-il lo scheduler è stato chiamato alla fine di una systemcall o qualsiasi 
+process nella coda ready e poi metta a null il processo corrente. Se
+lo scheduler è stato chiamato alla fine di una systemcall o qualsiasi
 altra operazione non bloccante allora il current process non sarà diverso
 da null e se quindi il timeslice non è ancora finito allora quel processo
 deve continuare a fare le sue cose, sennò se ne occuperà l'interrupt del
-timeslice (quello mandato dall'intervall timer) che metterà il processo in 
+timeslice (quello mandato dall'intervall timer) che metterà il processo in
 ready e current process a null per poi richiamare lo scheduler.
 
-Lo scheduler per prima cosa quidni vede se è finito il timeslise del 
-processo, se non è finito ma entro con un currentProces==NULL (questo 
-vuol dire che volgio prendere un nuovo processo dalla coda ready) allora
+Lo scheduler per prima cosa quidni vede se è finito il timeslise del
+processo, se non è finito ma entro con un currentProces==NULL (questo
+vuol dire che voglio prendere un nuovo processo dalla coda ready) allora
 devo settare un nuovo timeslice, se non era finito ma ho un processo
 che non aveva ragione di essere bloccto, metto l'interval timer alla
-fine del suo time slice (o pseudo clokck).  
+fine del suo time slice (o pseudo clokck).
 
 
 AGGIUSTAMENTI
@@ -101,36 +101,58 @@ per renderlo più coerente allo scheduler appena finito
 SYSTEMCALL
 
 Sto rivedendo le system call e ho trovato dei problemi nella createProcess.
-In primis, noi inizializziamo il processo con lo stato corrente del 
+In primis, noi inizializziamo il processo con lo stato corrente del
 processore, ma questo è sbagliato, dovremmo inizializzarlo con il parametro
 passato come argomento, correggo facendo una funzione (definita in initial)
-che copia uno stato in un altro stato.
-Devo vedermi un po' l'aritmetica dei puntatroi perché prorpio non capisco
+che copia uno stato in un altro stato. (Mi sembra strano che non ci sia in uArm... RIGUARDARE)
+Devo vedermi un po' l'aritmetica dei puntatori perché proprio non capisco
 quando devo mettere e quando non mettere la &, è troppo complicato
-il lavoro per provere e sperare di aver fatto bene 
+il lavoro per provare e sperare di aver fatto bene
+Io di solito penso in questo modo:
+&var ritorna l'indirizzo di memoria in cui è salvata var.
+Se var è un puntatore:
+- se vogliamo far riferimento all'indirizzo della cella di memoria a cui punta var,
+  basterà usare var così com'è
+- se vogliamo far riferimento al contenuto della cella a cui var punta,
+  bisogna usare *var (* operazione di dereferenziazione)
+Se var è una variabile è la stessa cosa se ci pensi:
+usare var da solo è come usare il contenuto di var, &var è l'indirizzo a cui è salvato il contenuto
+i puntatori sono solo un caso particolare in cui il contenuto della variabile è un indirizzo
 
 ASSEGNARE IL PID
 
-Ok, non capisco niente di come stiamo facendo i pid, quidni ho pensato di fare
-così: 
+Ok, non capisco niente di come stiamo facendo i pid, quindi ho pensato di fare
+così:
  Abbiamo l'array dei pcb attivi (active_pcb) e il pid del processo è il
-primo indice libero in quell'array. Poi salvo nella struttura dei pcb il 
+primo indice libero in quell'array. Poi salvo nella struttura dei pcb il
 pid, così se ho il pcb per recuperare il pid basta andare al campo dove
-salvi il pid, se ho il pid basta andare un active_pcb[pid] per trovare 
-il pcb  
+salvi il pid, se ho il pid basta andare un active_pcb[pid] per trovare
+il pcb
 (possiamo provare un algoritmo un po' più complicato ma per ora a me piace
 questo)
+------------- 21/08 ------------------
+    (Ci avevamo pensato anche quando eravamo insieme e il problema era che ogni volta che
+    assegni un nuovo pid devi scorrere tutto l'array per trovare una pos libera,
+    comunque anche per me si può lasciare così e cambiare in seguito)
+--------------------------------------
 
 Ho fatto nelle exceptions.c una funzione (newPid) che calcola il nuovo
 pid e salva il processo nei processi attivi salvando il pid nel campo
 giusto, anche qui non so se con i puntatori ho fatto bene.
 
-Ho scoperto che ci stava un types definito dal prof che non avevamo 
+------------- 21/08 ------------------
+    if (i >= MAXPROC) //ci sono più pricessi di quanti ne posso avere
+        PANIC();
+    Teoricamente non serve perchè se non ci fosse abbastanza spazio l'allocPcb
+    Avrebbe restituito NULL, però lo lascio     RIGUARDARE
+--------------------------------------
+
+Ho scoperto che ci stava un types definito dal prof che non avevamo
 ancora scaricato o visto dove nel pcb c'è lo spazio per il pid (-.-'')
 
-Nella terminate se passo 0 vuol dire che è il processo chiamante a uccidersi, 
+Nella terminate se passo 0 vuol dire che è il processo chiamante a uccidersi,
 e visto che il parametro è in teoria il pid del processo non posso usare 0
-come pid di nessun processo, quindi il pid dei processi saranno la 
+come pid di nessun processo, quindi il pid dei processi saranno la
 loro posizione nell'array+1, quindi ricordati di fare pid-1 quando
 vuoi accedere al pcd dal pid
 
@@ -138,49 +160,49 @@ vuoi accedere al pcd dal pid
 REVISIONE TERMINATE PROCESS
 
 Sono andata a vedere nel pdf di fase due che ti dice di aggiustare il semforo
-se era negativo, MA dice di non aggiustarlo se il semaforo è un semaforo 
-di device...ora, non capisco... i semaphori non si riferiscono solo ai 
+se era negativo, MA dice di non aggiustarlo se il semaforo è un semaforo
+di device...ora, non capisco... i semaphori non si riferiscono solo ai
 device? Cosa mi sfugge?
 Ok, penso che volendo puoi usare semafori che non siano utilizzati per i
-device, ma : come faccio a capire se sono bloccato su un semaforo di 
+device, ma : come faccio a capire se sono bloccato su un semaforo di
 device o qualunque altro semaforo?
 
 Ok, ho capito, non lo faccio ora perché devo uscire con mia cugina ma, pensavo
 che per vedere se un processo è bloccato su un device devo controllare
-se è bloccato in ognuno degli array dei semafori dei device, quidni 
-pensavo di fare un array bidimensionale per i device così è più facile 
+se è bloccato in ognuno degli array dei semafori dei device, quidni
+pensavo di fare un array bidimensionale per i device così è più facile
 accedervi nel programma così che poi l'indice nell'array corrisponde alla
-linea dell'interrupt (leggiti bene come funzionano queste cose e 
+linea dell'interrupt (leggiti bene come funzionano queste cose e
 aggiusta di conseguenza).
-Altra cosa che vorrei poter fare è salvarmi quante risorse ho chiesto non 
+Altra cosa che vorrei poter fare è salvarmi quante risorse ho chiesto non
 nel pcb, perché ora che ho trovato il pcb dove era già messo il pid
-sono non mi piace aggiungere cose al pcb 
+sono non mi piace aggiungere cose al pcb
 
 20/8
 
 SEMAFORI
 
-Per i device abbiamo che ci possiamo accedere specificando la linea 
-dell'interrupt a cui è collegato e a quale specifico device facciamo 
-riferimento, quindi per quello che capisco a senso fare un array di due
-dimensioni dove la prima dimensione indica la linea di interrupt (e per 
-questo la grandezza è DEV_USED_INTS) e la seconda il device (e quidni di 
+Per i device abbiamo che ci possiamo accedere specificando la linea
+dell'interrupt a cui è collegato e a quale specifico device facciamo
+riferimento, quindi per quello che capisco ha senso fare un array di due
+dimensioni dove la prima dimensione indica la linea di interrupt (e per
+questo la grandezza è DEV_USED_INTS) e la seconda il device (e quidni di
 dimensione DEV_PER_INT). Ho fatto il +1 nella prima dimensione dell'array
 perché in teoria il terminal è visto come due diversi device anche se
 ancora non capisco bene come funziona questa cosa. Bisogna ricordarsi, però
-che (in teoria) con la line 3 tu vuoi accedere all'array con indice 0 (il 
-semaforo del clock vuole la linea 2), quidni quando fai la sys10 vedi di 
+che (in teoria) con la line 3 tu vuoi accedere all'array con indice 0 (il
+semaforo del clock vuole la linea 2), quidni quando fai la sys10 vedi di
 ricordarti sta cosa.
 
 TERMINATE PROCESS
 
-Ho fatto una funzione per vedere se il semaforo è bloccato sul semaforo di 
+Ho fatto una funzione per vedere se il semaforo è bloccato sul semaforo di
 device. L'ho fatta diventare void perché nelle nostre specifiche non dice
 di restituire niente e quindi io non restituisco
 
 SYS3
 
-Con sara ci chiedevamo dove vedere quante risorse voleva un processo e 
+Con sara ci chiedevamo dove vedere quante risorse voleva un processo e
 quindi li avevamo messi nei pcb, questa cosa non mi piace, per ora la lascio
 così ma pensavo di fare un semplice array dove salvarlo (indicizzato con i pid
 quindi dal pid del processo posso subito recuperare da quell'array quante
@@ -194,7 +216,7 @@ SYSHANDLER
 Sto rivedendo l'intero hendler e noi avevamo fatto questa cosa strana
 mode= ((sysBp_old->cpsr & STATUS_SYS_MODE) >> 0x3);
 per vedere in che mode eravamo ma secondo me è sbagliato, secondo me
-basta fare & con la maschera impostata dalle costanti di davoli (che ho 
+basta fare & con la maschera impostata dalle costanti di davoli (che ho
 quello che ho fatto, poi vediamo facendo il test).
 Ok, più volte nelle specifiche ci dice di lavorare con lo user time e cpu
 time, ma non abiamo dove metterlo... (me ne sono accorta solo ora), dobbiamo
@@ -204,9 +226,9 @@ le cose nella old area e noi le dobbiamo recuperare da lì? dove sta scritto?
 Ho trovato questo scritto nel manuale di uarm:
 "Each time an exception is risen, the BIOS handlers will store the processor
 state before the exception into the proper Old area, perform other tasks where
-required (see sec. 2.5.2) and eventually load the processor state stored 
+required (see sec. 2.5.2) and eventually load the processor state stored
 in the corresponding New area. The New areas must be filled with valid
-processor states pointing to kernel level exception handlers by kernel 
+processor states pointing to kernel level exception handlers by kernel
 initialization stage."
 Forse è utile.
 Ho messo cosa fare nel caso si sia in user mode.
@@ -216,12 +238,56 @@ a fare prima quella e poi torno a fare l'handler
 
 SYS4
 
-Non capisco quasi niente dalle specifiche. Ora cerco di popolare al newArea 
+Non capisco quasi niente dalle specifiche. Ora cerco di popolare al newArea
 che mi dice lui nel modo che mi dice lui. Quanto mi da sui nervi che dice
 "il kernel fa questo" "il nucleo fa quello", che vuol dire?!?!? Io che devo
-fare quando implemento la syscall?!?!? TT__TT 
+fare quando implemento la syscall?!?!? TT__TT
 Questa è anche diversa da quelli di l'anno scorso quidni mi devo arrangiare.
 
 Ok, di questa ho scritto praticamente tutto quello che ho fatto nel codice.
-Sono stanca, per oggi basta (anche se le prossime due syscall dovrebbero 
+Sono stanca, per oggi basta (anche se le prossime due syscall dovrebbero
 essere praticmente uguali a questa)
+
+21/08
+Ho letto quel file di stack overflow e ho visto le tue modifiche a riguardo, però
+non hai toccato le cose di phase1, secondo me dovremmo mettere extern anche nelle
+dichiarazioni di quegli header sennò non siamo coerenti.
+Ho aggiunto commenti in mezzo ai tuoi appunti degli altri giorni, preferisci che
+io scriva sempre in fondo? comunque li ho messi tra righe di trattini così sono
+riconoscibili. Inoltre le cose su cui non ero sicura le ho affiancate da
+"RIGUARDARE" in modo che possiamo fare Ctrl+F e pensarci un attimo.
+Secondo me l'idea del campo nel pcb con il numero di risorse richieste era una
+buona idea anche se non mi piace che non ci sia in quello di davoli (anche se è
+probabile che non l'abbia messo solo perchè non voleva aiutarci troppo o perchè
+voleva farci pensare ai possibili modi di risolvere la cosa). Mi è venuto un dubbio:
+un processo può star fermo su più semafori? no, vero? perchè in quel caso il counter
+nel pcb sarebbe sbagliato.
+Più ci penso e più mi convinco che un campo nel pcb sia la cosa migliore, in ogni
+caso dobbiamo sapere quante risorse richiedeva il pcb e avere una struttura ausiliaria
+ci costerebbe di più perchè dovremmo fare più accessi. L'unica alternativa plausibile
+sarebbe fare un campo aggiuntivo nel semaforo, però secondo me ha più senso nel pcb.
+
+exception.c
+    Per quanto riguarda la chiamata a copyState secondo me va bene come hai messo &.
+    A volte i pid erano rimasti definiti int, ho cambiato in pid_t.
+    Nell'handler delle sys non ho capito bene cosa fai in usermode, però dal pdf
+    di phase2 non ho capito neanche bene cosa deve fare il pgmTrap handler e ho
+    visto che lo chiami...
+
+    createProcess
+    chiamavi newPid con lo stato del processore, ho modificato e
+    ho messo come parametro il nuovo pcb
+
+    terminateProcess
+    termina il processo senza controllare che sia nella progenie del chiamante RIGUARDARE
+    possibili soluzioni:
+        1.scorrere il sottoalbero del currentProcess per vedere se il pid passato
+        per parametro è di uno dei suoi figli/nipoti
+        2.fare in modo che un processo "veda" solo i pid del suo sottoalbero, ma come?
+    Ho controllato e quelli dell'anno scorso non lo fanno sto controllo. Uffa.
+    ho cambiato un po' i controlli per vedere se si tratta di suicidio in modo che
+    il pid venga modificato solo se gli passiamo 0 come parametro, però il tutto
+    è poco leggibile quindi vedi tu che versione tenere, quella vecchia sta lì
+    commentata. Per vedere se è bloccato su un sem di Device quelli dell'anno
+    scorso hanno fatto una funzione che sembra carina ma usa devSem che non so dove
+    sia definita RIGUARDARE.
