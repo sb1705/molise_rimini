@@ -173,7 +173,7 @@ void sysBpHandler(){
 
 
  // nell'endeler il valore di ritorno di questa funzione verrà salvato nel registro giusto
-int createProcess(state_t *statep){
+pid_t createProcess(state_t *statep){
 	pid_t pid;
 	pcb_t *newp;
 
@@ -187,7 +187,7 @@ int createProcess(state_t *statep){
 
 		/* Aggiorna il contatore dei processi e il pidCounter (progressivo) */
 		processCount++;
-		pid=newPid(statep);
+		pid=newPid(newp);
 		/*newp diventa un nuovo figlio del processo chiamante */
 		insertChild(currentProcess, newp);
 		insertProcQ(&readyQueue, newp);
@@ -201,7 +201,7 @@ int createProcess(state_t *statep){
   * @param pid : identificativo del processo da terminare.
   * @return Restituisce 0 nel caso il processo e la sua progenie vengano terminati, altrimenti -1 in caso di errore.
  */
-void terminateProcess(int pid){
+void terminateProcess(pid_t pid){
 	int i;
 	pcb_t *pToKill;
 	pcb_t *pChild;
@@ -212,10 +212,22 @@ void terminateProcess(int pid){
 	isSuicide = FALSE;
 
 	/* Se è un caso di suicidio, reimposta il pid e aggiorna la flag */
-	if((pid == 0) /*|| (currentProcess->p_pid == pid)*/){
+	if(currentProcess->p_pid != pid){
+		if(pid == 0){
+			pid = currentProcess->p_pid;
+			isSuicide = TRUE;
+		}
+	}
+	else
+		isSuicide = TRUE;
+
+	/* Quello di prima era più leggibile quindi lo lascio qui, cancella la versione
+	che ti piace di meno
+
+	if((pid == 0) || (currentProcess->p_pid == pid)){
 		pid = currentProcess->p_pid;
 		isSuicide = TRUE;
-	}
+	}*/
 
 	/* Recupera nella tabella dei pcb usati quello da rimuovere */
 	pToKill = active_pcb[pid-1]; //ancora non so come fare con i puntatori
@@ -234,7 +246,9 @@ void terminateProcess(int pid){
 
 		if (pToKill == NULL)
 			PANIC();
-		}else{
+
+		}
+		else{
 			//qui sono bloccato su un semaforo che è un device quindi un processo era bloccato su semafori di Device vuol dire che aspettavo qualche interrupt quindi, eliminando questo processo devo diminuire il conteggio dei softBlockCount, non sono sicura però che devo farlo qui e non nell'interrupt hendler direttamente ma per ora lo metto qui
 			softBlockCount--;
 		}
