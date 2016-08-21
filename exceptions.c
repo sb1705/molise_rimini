@@ -54,19 +54,24 @@ int onDev (pcb_t *pcb){
 
 }
 
-//vedere se nel sottoalbero del processo mypcb compare il pid dato
-//restituisce il pcb corrispondente, NULL altrimenti
-pcb_t *walk(pcb_t *mypcb, pid_t pid){
-	if(mypcb==NULL)
-		return NULL;
-	if(mypcb->p_pid == pid)
-		return mypcb;
-	else{ //Secondo me è sbagliata perchè passa più volte sugli stessi elementi, bisognerebbe usare clist_foreach
-		walk(container_of(mypcb->p_siblings, struct pcb_t, p_siblings), pid);//cerco tra i fratelli
-		walk(container_of(mypcb->p_children, struct pcb_t, p_siblings), pid);//cerco tra i figli
-	}
+//Per vedere se nel sottoalbero di mypcb compare il pid dato chiamiamo walk con
+//il puntatore al primo dei figli di mypcb
+//restituisce il pcb corrispondente al pid dato, NULL altrimenti
 
+pcb_t *walk(pcb_t *mypcb, pid_t pid){
+	pcb_t *scan;
+	void *tmp;
+	struct clist *tp=mypcb->p_siblings; //puntatore al campo clist del processo corrente
+	clist_foreach(scan, tp, p_siblings, tmp){ //scorre i fratelli
+		if(scan->p_pid==pid)
+			return scan;
+		if(scan->p_children!=NULL)
+			return walk(container_of(scan->p_children, struct pcb_t, p_siblings), pid);//cerco tra i figli
+	}
+	return NULL;
 }
+
+
 void sysBpHandler(){
 	state_t *sysBp_old = (state_t *) SYSBK_OLDAREA;
 	//non ho capito bene, ma in teoria quando fai la system call ti stora le cose nella old area e quindi tu metti gli stati della od area nel processo corrente, ma non so se va bene
