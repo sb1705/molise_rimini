@@ -290,4 +290,8 @@ exception.c
     è poco leggibile quindi vedi tu che versione tenere, quella vecchia sta lì
     commentata. Per vedere se è bloccato su un sem di Device quelli dell'anno
     scorso hanno fatto una funzione che sembra carina ma usa devSem che non so dove
-    sia definita RIGUARDARE.
+    sia definita RIGUARDARE. Ah, ho appena visto che l'hai messa anche tu in exeptions.
+    Ho cominciato a scrivere una funzione walk, per scorrere il sottoalbero di un
+    processo, però sto facendo casino con la lista dei fratelli e dei figli, la
+    finirò quando sono un po' più lucida. Sul libro di algoritmi c'è qualche
+    funzione per la ricerca su alberi non binari? il mio è a Bologna.
