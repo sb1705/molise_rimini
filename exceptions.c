@@ -86,7 +86,7 @@ void sysBpHandler(){
 		if((currentProcess->p_s.cpsr & STATUS_SYS_MODE) == STATUS_SYS_MODE){
 			//sono in kernel mode quindi da qui faccio tutte le cose che devo fare
 			//essendo sicura di essere in kernel mode posso dire che è finito il tempo utente del processo. Dovrei farlo appena entrata nell'handler? Non cred perché potrei essere capitata qui anche in user mode, solo qui ho la sicurezza di essere in kernel mode
-			currentProcess->userTime += getTODLO() - userTimeStart;
+			currentProcess->p_userTime += getTODLO() - userTimeStart;
 
 			/* Salva i parametri delle SYSCALL */
 			unsigned int sysc = sysBp_old->a1;
@@ -117,24 +117,24 @@ void sysBpHandler(){
 					break;
 
 				case SPECTLBHDL:
-
+					specifyTLBHandler((memaddr) argv1, (memaddr) argv2, (unsigned int) argv3);
 					break;
 
 				case SPECPGMTHDL:
-
+					specifyPgmTrapHandler((memaddr) argv1, (memaddr) argv2, (unsigned int) argv3);
 					break;
 
 
 				case EXITTRAP:
-
+					exitTrap((unsigned int) excptype, (unsigned int) retval)
 					break;
 
 				case GETCPUTIME:
-					//currentProcess->p_state.reg_v0 = getCPUTime();
+					getCpuTime((cputime_t *) argv1, (cputime_t *) argv2); //ancora non sono sicura che il cast sia giusto
 					break;
 
 				case WAITCLOCK:
-					//waitClock();
+					waitClock();
 					break;
 
 				case IODEVOP:
@@ -142,7 +142,7 @@ void sysBpHandler(){
 					break;
 
 				case GETPID:
-					currentProcess->p_state.reg_v0 = getPid();
+					currentProcess->p_s.a1 = getPid();
 					break;
 
 
@@ -190,7 +190,7 @@ void sysBpHandler(){
  */
 
 
- // nell'endeler il valore di ritorno di questa funzione verrà salvato nel registro giusto
+ // nell'handeler il valore di ritorno di questa funzione verrà salvato nel registro giusto
 pid_t createProcess(state_t *statep){
 	pid_t pid;
 	pcb_t *newp;
@@ -235,9 +235,10 @@ void terminateProcess(pid_t pid){
 			pid = currentProcess->p_pid;
 			isSuicide = TRUE;
 		}
+		else{
+			isSuicide = TRUE;
+		}
 	}
-	else
-		isSuicide = TRUE;
 
 	/* Quello di prima era più leggibile quindi lo lascio qui, cancella la versione
 	che ti piace di meno
@@ -258,11 +259,11 @@ void terminateProcess(pid_t pid){
 	if(onSem(pToKill)){
 		if(!onDev(pToKill)){
 
-		/* Incrementa il semaforo e aggiorna questo ultimo se vuoto */
-		semaphoreOperation ((int)&pToKill->p_cursem, pToKill->p_resource);
-		pToKill = outBlocked(pToKill);
+			/* Incrementa il semaforo e aggiorna questo ultimo se vuoto */
+			semaphoreOperation ((int)&pToKill->p_cursem, pToKill->p_resource);
+			pToKill = outBlocked(pToKill);
 
-		if (pToKill == NULL)
+			if (pToKill == NULL)
 			PANIC();
 
 		}
@@ -324,7 +325,7 @@ void semaphoreOperation (int *semaddr, int weight){
 				pcb_t *p;
 				p=headBlocked(semaddr);
 				if(p!=NULL){
-					if(p->p_resource<=weight){
+					if(p->p_resource<=weight || p->p_resource <= *semaddr){
 						p = removeBlocked(semaddr);
 						if (p != NULL){
 							p->p_resource=0;
@@ -341,9 +342,11 @@ void semaphoreOperation (int *semaddr, int weight){
 			//se il semaforo era o diventa negativo ci blocchiamo, altrimenti modifichiamo il valore del semaforo
 
 			if  (*semaddr <= 0)  {
-				currentProcess->p_resource=weight;
 				if(insertBlocked(semaddr, currentProcess))
 					PANIC();	//currentProcess è dell'initial???
+
+				currentProcess->p_resource=weight;
+				currentProcess->p_CPUTime += getTODLO() - CPUTimeStart;
 				currentProcess = NULL;
 			}
 
@@ -352,13 +355,13 @@ void semaphoreOperation (int *semaddr, int weight){
 }
 
 //Specify Sys/BP Handler SYS4
-void specifySysBpHandler(memaddr argv1, memaddr argv2, unsigned int argv3){
+void specifySysBpHandler(memaddr pc, memaddr sp, unsigned int flags){
 
 	if (currentProcess->p_excpvec[EXCP_SYS_NEW]==NULL){
 		state_t *sysBp_new = (state_t *) SYSBK_NEWAREA;
-		sysBp_new->pc=argv1;
-		sysBp_new->sp=argv2;
-		sysBp_new->cpsr=argv3; //questo non sono sicura di come fare visto che sono dei flag, forse ci sta qualcosa tra le costanti varie di uarm ma sono stanca, non mi va di cercare ora
+		sysBp_new->pc=pc;
+		sysBp_new->sp=sp;
+		sysBp_new->cpsr=flags; //questo non sono sicura di come fare visto che sono dei flag, forse ci sta qualcosa tra le costanti varie di uarm ma sono stanca, non mi va di cercare ora
 
 		//questo dovrebbe copiare l'asid del currentProcess in quello della newArea. le macro che ho usato sono sempre in uARMconst
 		sysBp_new->CP15_EntryHi=ENTRYHI_ASID_SET( sysBp_new->CP15_EntryHi, ENTRYHI_ASID_GET(currentProcess->p_s.CP15_EntryHi));
@@ -373,6 +376,101 @@ void specifySysBpHandler(memaddr argv1, memaddr argv2, unsigned int argv3){
 	}
 }
 
+
+//Specify TLB Handler SYS5
+void specifyTLBHandler(memaddr pc, memaddr sp, unsigned int flags){
+
+	if (currentProcess->p_excpvec[EXCP_TLB_NEW]==NULL){
+		state_t *TLB_new = (state_t *) TLB_NEWAREA;
+		TLB_new->pc=pc;
+		TLB_new->sp=sp;
+		TLB_new->cpsr=flags; //questo non sono sicura di come fare visto che sono dei flag, forse ci sta qualcosa tra le costanti varie di uarm ma sono stanca, non mi va di cercare ora
+
+		//questo dovrebbe copiare l'asid del currentProcess in quello della newArea. le macro che ho usato sono sempre in uARMconst
+		TLB_new->CP15_EntryHi=ENTRYHI_ASID_SET( TLB_new->CP15_EntryHi, ENTRYHI_ASID_GET(currentProcess->p_s.CP15_EntryHi));
+
+
+		//ok, dovrei avere qualcosa per vedere se il processo ha già chiamato questa cosa e non ho la più pallida idea di come fare.
+		//L'idea che mi è venuta è di usare l'exception states vector che sta nel pcb. Se poi vedo che ha un'altra funzione penserò a qualcos'altro
+		currentProcess->p_excpvec[EXCP_TLB_NEW]=TLB_new;
+
+	}else{ //visto che la sys4 settata il vettore delle ecezioni del currentProcess alla new area appena fatta se questo è !=NUll (come succede in questo ramo else), allora vuol dire che la sys4 questo processo l'aveva già chiamata quindi devo comportarmi di conseguenza come dicono le specifche
+		terminateProcess(0);
+	}
+}
+
+//Specify Program Trap Handler (SYS6)
+void specifyPgmTrapHandler(memaddr pc, memaddr sp, unsigned int flags){
+
+	if (currentProcess->p_excpvec[EXCP_PGMT_NEW]==NULL){
+		state_t *pgmTrap_new = (state_t *) PGMTRAP_NEWAREA;
+		pgmTrap_new->pc=pc;
+		pgmTrap_new->sp=sp;
+		pgmTrap_new->cpsr=flags; //questo non sono sicura di come fare visto che sono dei flag, forse ci sta qualcosa tra le costanti varie di uarm ma sono stanca, non mi va di cercare ora
+
+		//questo dovrebbe copiare l'asid del currentProcess in quello della newArea. le macro che ho usato sono sempre in uARMconst
+		pgmTrap_new->CP15_EntryHi=ENTRYHI_ASID_SET( pgmTrap_new->CP15_EntryHi, ENTRYHI_ASID_GET(currentProcess->p_s.CP15_EntryHi));
+
+
+		//ok, dovrei avere qualcosa per vedere se il processo ha già chiamato questa cosa e non ho la più pallida idea di come fare.
+		//L'idea che mi è venuta è di usare l'exception states vector che sta nel pcb. Se poi vedo che ha un'altra funzione penserò a qualcos'altro
+		currentProcess->p_excpvec[EXCP_PGMT_NEW]=pgmTrap_new;
+
+	}else{ //visto che la sys4 settata il vettore delle ecezioni del currentProcess alla new area appena fatta se questo è !=NUll (come succede in questo ramo else), allora vuol dire che la sys4 questo processo l'aveva già chiamata quindi devo comportarmi di conseguenza come dicono le specifche
+		terminateProcess(0);
+	}
+}
+
+
+// Exit From Trap SYS7
+
+void exitTrap(unsigned int excptype, unsigned int retval){
+
+	state_t *load;
+	//prendo la old area delle eccezioni che ci serve
+	state_t *old_area = currentProcess->p_excpvec[excptype];
+	//metto il valore di ritorno nel registro a1
+	old_area->a1=retval;
+	load=old_area;
+	//posso fare così o devo usare la copy? qui metto anche la copy da decommentare in caso quella sopra non funzioni
+	//
+	//copyState(load, old_area);
+	//
+
+	//carico lo stato (dove chi lo sa, le specifiche non lo specificano xD)
+	LDST(load); //ancora, ci vuole & o non?
+
+	// se devi caricorno nel pcb e non nel processore decommenta quello che segue e togli la LDST di prima
+	//
+	//copyState(currentProcess->s_p,load);
+
+}
+//Get CPU Time SYS8
+void getCpuTime(cputime_t *global, cputime_t *user){
+	cputime_t current_cpu= currentProcess->p_CPUTime; //devo studiarmi come si lavora con i puntatori, è giusto così?
+	cputime_t current_usr= currentProcess->p_userTime;
+	//in teoria qui il mio processo sta ancora nella cpu ma in kernel mode perchè sta facendo syscall quindi devo vedere da quando ha iniziato a stare nella cpu ad ora, quanto tempo è passato?
+	current_cpu += getTODLO() - CPUTimeStart;
+	*global=current_cpu;
+	*user=current_usr;
+}
+
+
+ //Wait For Clock SYS9
+ void waitClock(){
+	 //blocco il processo e aumento il conto dei processi che aspettano interrupts
+	 softBlockCount++;
+	semaphoreOperation(&pseudoClock, -1);
+
+ }
+
+
+
+// Get Process ID SYS11
+
+pid_t getPid(){
+	return currentProcess->p_pid;
+}
 
 //Che palle... questi due fanno più o meno le stesse cose, cambia quale system call ha chiamato l'errore, per il primo SYS5 e il secondo SYS6
 

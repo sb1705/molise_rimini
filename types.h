@@ -19,6 +19,9 @@ typedef struct pcb_t {
 	pid_t p_pid;
 	state_t p_s; /* processor state */
 	state_t p_excpvec[EXCP_COUNT]; /*exception states vector*/
+	int p_resource;                     /* proc's requested resources*/ //messo da noi
+	cputime_t p_CPUTime; //messo da noi
+	cputime_t p_userTime; //messo da noi
 	struct clist p_list; /* process list */
 	struct clist p_children; /* children list entry point*/
 	struct clist p_siblings; /* children list: links to the siblings */

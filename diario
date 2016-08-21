@@ -236,7 +236,11 @@ Volevo fare anche l caso breakpoint ma centrava con la sys4, quindi provo
 a fare prima quella e poi torno a fare l'handler
 
 
-SYS4
+SYS4 
+
+(ATTENZIONE! : qualsiasi modifica o errore trovato in questa funzione sarà
+anche nelle sys5 e sys6 perché ho fatto copia incolla e fanno praticmamente 
+la stessa cosa)
 
 Non capisco quasi niente dalle specifiche. Ora cerco di popolare al newArea
 che mi dice lui nel modo che mi dice lui. Quanto mi da sui nervi che dice
@@ -249,23 +253,43 @@ Sono stanca, per oggi basta (anche se le prossime due syscall dovrebbero
 essere praticmente uguali a questa)
 
 21/08
+
+
 Ho letto quel file di stack overflow e ho visto le tue modifiche a riguardo, però
 non hai toccato le cose di phase1, secondo me dovremmo mettere extern anche nelle
 dichiarazioni di quegli header sennò non siamo coerenti.
+------------------------------------
+	Si hai ragione, dovremmo aggiustare anche lì, ci avevo pensato ma ero troppo 
+	stanca per farlo, dobbiamo correggerlo prima o poi u.u
+-----------------------------------
+
 Ho aggiunto commenti in mezzo ai tuoi appunti degli altri giorni, preferisci che
 io scriva sempre in fondo? comunque li ho messi tra righe di trattini così sono
 riconoscibili. Inoltre le cose su cui non ero sicura le ho affiancate da
 "RIGUARDARE" in modo che possiamo fare Ctrl+F e pensarci un attimo.
+--------------------------------------------
+	mi piace la cosa dei trattini, e alla fine se facciamo che lavoriamo in questo modo
+	e quidni ogni volto devo rileggere solo gli appunti di un giorno la cosa è
+	comodissima :)
+------------------------------------------
 Secondo me l'idea del campo nel pcb con il numero di risorse richieste era una
 buona idea anche se non mi piace che non ci sia in quello di davoli (anche se è
 probabile che non l'abbia messo solo perchè non voleva aiutarci troppo o perchè
 voleva farci pensare ai possibili modi di risolvere la cosa). Mi è venuto un dubbio:
 un processo può star fermo su più semafori? no, vero? perchè in quel caso il counter
 nel pcb sarebbe sbagliato.
+-----------------------------------
+	Abbiamo solo un campo cursem quidni ti puoi bloccare su un solo semaforo
+	alla volta
+--------------------------------
 Più ci penso e più mi convinco che un campo nel pcb sia la cosa migliore, in ogni
 caso dobbiamo sapere quante risorse richiedeva il pcb e avere una struttura ausiliaria
 ci costerebbe di più perchè dovremmo fare più accessi. L'unica alternativa plausibile
 sarebbe fare un campo aggiuntivo nel semaforo, però secondo me ha più senso nel pcb.
+-------------------------------
+	anche per me ha più sneso nel pcb ma forse riusciamo a pensare a qualche altra
+	soluzione
+-------------------------------
 
 exception.c
     Per quanto riguarda la chiamata a copyState secondo me va bene come hai messo &.
@@ -273,6 +297,17 @@ exception.c
     Nell'handler delle sys non ho capito bene cosa fai in usermode, però dal pdf
     di phase2 non ho capito neanche bene cosa deve fare il pgmTrap handler e ho
     visto che lo chiami...
+---------------------------------
+	praticamete un programma utente piò usare le syscall (ne abbiamo fatti
+	tanti noi di es in c usando le systemcall) però essendo comunque istruzioni
+	che si devono fare in kernel mode quando un programma in user mode usa una syscall
+	si gnera una trap (interrupt generata dal programma) e la chiamta viene
+	passata quidni al gestore dei trap (che dobbiamo scrivere più avanti). In 
+	teoria le copie delle oldarea varie che ho fatto servono appunto per fare 
+	il passaggio della syscall, perché mi pare di aver capito che quando 
+	chiami le syscall salvi le cose nella sysbp_oldArea mentre quando gestisci
+	le trap le cose vanno messe dei pgmTrap_oldArea
+---------------------------------
 
     createProcess
     chiamavi newPid con lo stato del processore, ho modificato e
@@ -283,12 +318,30 @@ exception.c
     possibili soluzioni:
         1.scorrere il sottoalbero del currentProcess per vedere se il pid passato
         per parametro è di uno dei suoi figli/nipoti
+	------------------------------
+		cosa cambia se il pid passato è di uno dei figli del currentProcess?
+		la funzione comunque lo elimina correttamente quindi non vedo il problema
+	------------------------------
         2.fare in modo che un processo "veda" solo i pid del suo sottoalbero, ma come?
     Ho controllato e quelli dell'anno scorso non lo fanno sto controllo. Uffa.
+	---------------------------------
+		questo dovrebbe servire per assicurarsi che il processo che chiama
+		la terminate non voglia terminare un processo di cui il 
+		currentProcess è discendente?
+		Però non sarebbe un problema, nel caso si uccida il currentProcess
+		perché era figlio del processo che inizialmente il currentProcess 
+		doveva uccidere, la funione funziona correttamente
+	---------------------------------
+
     ho cambiato un po' i controlli per vedere se si tratta di suicidio in modo che
     il pid venga modificato solo se gli passiamo 0 come parametro, però il tutto
     è poco leggibile quindi vedi tu che versione tenere, quella vecchia sta lì
-    commentata. Per vedere se è bloccato su un sem di Device quelli dell'anno
+    commentata.
+-----------------------------------
+	a me sembra abbastanza leggibile, alla fine è solo un controllo in più,
+	quindi per me si può lasciare così
+------------------------------------
+ Per vedere se è bloccato su un sem di Device quelli dell'anno
     scorso hanno fatto una funzione che sembra carina ma usa devSem che non so dove
     sia definita RIGUARDARE. Ah, ho appena visto che l'hai messa anche tu in exeptions.
     Ho cominciato a scrivere una funzione walk, per scorrere il sottoalbero di un
@@ -296,3 +349,117 @@ exception.c
     cosa urgente. Ci ho messo un sacco perchè ho dovuto riguardare come funzionavano
     le cose di phase0 e come le avevamo usate nella phase1, però credo di esserci
     riuscita.
+--------------------------------------
+	perché dovrebbe servire?
+---------------------------------------
+
+********||Parte di Olga||************
+
+L'hai gardata un po' la sys4? Io vado avanti con le altre poi aggiornami se trovi qualcosa
+che non ti torna su quella u.u
+
+SYS5/SYS6
+
+Queste sono praticamente uguali alla sys4 quindi tutte i dubbi su di quella rimangono 
+anche qui, io però faccio copia e incolla e modifico solo le cose che devo modificare
+quidni se scopriamo che la sys4 è sbagliata lo saranno anche queste due
+
+SYS7
+
+Allora dice che l'oldArea del Pcb (che suppongo deva essere recuperata dall'array che 
+ho usato anche per le SYS4-5-6) deve essere caricato, ora, dove deve essere caricato?
+Io lo carico sia sia in p_s del pcb corrente che nel processore vero e proprio e commento
+quello del pcb perché nelle specifiche dice che solo il nucleo conosce i pcb.
+L'ho fatta troppo subito, secondo me c'è qualcosa che non ho capito u.u
+
+SYS8
+
+Ecco che iniziamo con lo user Time e company, quidni penso prorpio che va messo nel pcb,
+vado a modificare le strutture, spero di non dimenticarmene qualcuna (p.s. abbiamo due 
+types.h: una è quella nostra e una e quella del prof, io le modifico entrambe).
+Ora, noi facciamo iniziare lo userTime e il cpuTime nello scheduler quando si sceglie il 
+processo a cui tocca partire (usiamo una variabile ce si prende lo start time di entrambi),
+quidni quando al processo si toglie la cpu dobbiamo aggiornare il valore. Per il tempo in 
+user mode, questo finisce anche quando faccio una systemcall (che è fatta ovviamente in 
+kernel mode) quindi all'inizio l'handler si occupa di settare bene il tempo utente, mentre
+l'intervallo per la cpu va aggiornato quando al processo viene tolto il controllo,
+e questo succede quando avviene qualche interrupt quidni per aggiornare quel valore ci
+pensa l'handler degli interrupt ad aggiornarlo per bene e quindi a quello ci penserò 
+quando farò l'handler degli interrupt. Per ora per restituire il globalTime che 
+vuole questa funzione basta prendere il tempo di ora e il tempo salvato in 
+currentProcess->p_CPUtime e calcolare l'intervallo.
+Una cosa: tu processo, quando finisci il tuo timeslice esci dal processore, ma il tempo
+che passi nel processore va considerato come quello totale che passi nella cpu (quindi 
+la somma di tutti i time slice) o solo il tempo che hai occupato continuamente la cpu?
+
+
+SYS9
+
+Dobbiamo bloccare il processo che chiama nel semaforo del clock, quidni uso la insertBlocked
+con come indirizzo l'indirizzo del semaforo dello pseudoClock. Visto che è comunque 
+un semaforo e io mi sto bloccando sul semaforo faccio anche una -1 sul semaforo, ma non so
+se la devo effettivamente fare...io lo faccio u.u
+Poi dice che le cose su questo semaforo vengono sbloccate automaticamente dal nucleo ogni
+100 millisecondi....ora, questo lo gestiremo con gli interrupt? oppure dobbiamo farci un 
+altra cosa che ogni 100 millisecondi ha il solo scopo di sbloccare i processi nel semaforo
+dello pseudo clock? Per ora non lo so, secondo me ci vuole un interrupt però non so bene
+come gestirlo. Però tanto gli costava mettere due timer così uno lo usavi per il time
+slice e uno per i 100 millisecondi? bah, forse bisognerà ritornare su questo e vedere
+se nel modo in cui abbiamo fatto lo scheduler ti assicura che ci sia un interrupt ogni 100
+millisecondi
+
+SEMAPHOREOPERATIONS
+
+Una cosa che non mi torna è perché per sbloccare il processo non controlliamo il 
+nuovo valore del semaforo invece di vedere il peso, mi ricordo che ne avevamo discusso, per 
+ora ho messo un || ma secondo me si potrebbe controllare direttamente il semaforo 
+eliminando completamente il peso, però ricordo che centrava qualcosa con le specifiche.
+Però se controlliamo solo il peso potremmo avere questa situazione: ho un processo bloccato
+che vuole 3 risorse. Il semaforo è a -3. Arriva un processo che libera 2 risorse
+quindi 2<3 non possiamo liberare il processo bloccato, il semaforo diventa -1. Arriva un
+altro processo che libera 1 risorsa e quindi il semaforo è 0 e quindi potrei poter liberare
+il primo processo in coda ma per come lo abbiamo fatto noi visto che 1<3 non lo possiamo 
+liberare. Ancora mi è sorta una domanda: noi inizializziamo i semafori a 0 quidni quando
+prendo risorse la prima volto io posso fare anche -100, va bene? Questo in realtà penso
+che dipende perché per l'i/o mi dicono le specifiche ne posso chiedere solo una alla volta
+quidni magari gli altri semafori funzionano diversamente. E quindi qui mi sale un altro
+dubbio: se voglio 3 risorse le posso prendere anche se il semaforo è 0 o devo aspettare 
+che il semaforo si 3? Sono confusa. 
+
+Altra nota: per come abbiamo fatto noi la funzione abbiamo che le risorse le assegnamo 
+tutte insieme, ovvero se il processo chiede 5 risorse ma ce ne sono solo 3 libere lui 
+si blocca. Non credo sia sbagliato ma dobbiamo sapere che succede
+
+Sono andata a aggiustare il timer, perché se ci blocchiamo su un semaforo non sto usando
+più la cpu quidni devo aggiornare il cputimer
+
+Ho trovato questo nella mailing list. Secondo me, per come lo abbiamo fatto noi il 
+problema non si pone, secondo te?
+
+	2. Nel paragrafo 3.7.4 "Process Termination" della documentazione di fase 2, c'e' scritto:
+		"If the value of a semaphore is negative, it means that some processes (of
+		wich the ProcBlks are blocked on that semaphore) have requestes a number
+		of resources. Hence if a terminated process is blocked on a semaphore,
+		the value of the semaphore must be adjusted. "
+
+	In questo caso, oltre a sistemare il valore del semaforo è anche necessario risvegliare (eventualmente) i processi bloccati su di esso richiamando una semaphore operation?
+	
+	2. dipende, se il processo aveva gia` ottenuto un quantitativo di risorse 
+	sufficienti a sbloccare il successivo allora ha senso che questo venga sbloccato, 
+	ma se si termina un processo a meta` della coda di attesa di un semaforo, 
+	questo non ha ancora certamente ricevuto nessuna risorsa, quindi bisogna soltanto 
+	sistemare il valore dell'intero relativo al semaforo.
+
+Ora mi è venuto un dubbio sulla terminate: se terminiamo un processo mentre sta lavorando
+con risorse di un semaforo, dovremmo liberare quelle risorse, come facciamo? Forse ci
+pensa la sys10, ora vedo u.u
+	
+
+
+SYS10
+
+Non ho capito niente, o meglio non trovo le cose, uff sono stanca, la vedo domani
+
+SYS11
+
+Semplice e intutitiva, nietne da dire

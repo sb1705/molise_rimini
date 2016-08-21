@@ -23,14 +23,19 @@ struct pcb_t *allocPcb(){
 	struct pcb_t *p;							//Processo da allocare
     clist_head(p, pcbFree, p_list);
 	clist_dequeue(&pcbFree);
-    p->p_parent=NULL;
+    	p->p_parent=NULL;
 	p->p_cursem=NULL;
-	p->p_resource=0;
-	p->p_s=0;
 	p->p_pid=0;
+	p->p_s=0;
+	p->p_resource=0;
+	p->p_userTime=0;
+	p->p_CPUTime=0;
 	p->p_list.next=NULL;
 	p->p_children.next=NULL;
 	p->p_siblings.next=NULL;
+	for (int i=0; i<EXCP_COUNT; i++){
+		p->p_excpvec[i]=NULL;
+	}
 	return (p);
 
 }

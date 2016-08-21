@@ -34,7 +34,7 @@ unsigned int current_timer;
 
 
 void scheduler(){
-
+	//RIVEDERE se è garantito che lo pseudo clock scatta ogni 100 millisecondi
 	unsigned int time = getTODLO(); // mi salvo quando sono entrato nello scheduler
 	//controllo se è finito il time slice o lo pseudo-clock, se uno dei due è finito, vuol dire che lo scheduler è stato chiamaato
 	//dall'interrupt del Timer
