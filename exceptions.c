@@ -235,18 +235,10 @@ void terminateProcess(pid_t pid){
 			pid = currentProcess->p_pid;
 			isSuicide = TRUE;
 		}
-		else{
-			isSuicide = TRUE;
-		}
 	}
-
-	/* Quello di prima era più leggibile quindi lo lascio qui, cancella la versione
-	che ti piace di meno
-
-	if((pid == 0) || (currentProcess->p_pid == pid)){
-		pid = currentProcess->p_pid;
-		isSuicide = TRUE;
-	}*/
+	else{
+			isSuicide = TRUE;
+	}
 
 	/* Recupera nella tabella dei pcb usati quello da rimuovere */
 	pToKill = active_pcb[pid-1]; //ancora non so come fare con i puntatori
