@@ -455,6 +455,70 @@ con risorse di un semaforo, dovremmo liberare quelle risorse, come facciamo? For
 pensa la sys10, ora vedo u.u
 	
 
+-----------------------------------------------------------------------------
+Domande:
+- come si comporta la var pseudoClock? Ho visto che la dichiarazione sta in initial
+e poi la modifichiamo nello scheduler, però non mi è chiaro
+
+- per quanto riguarda i device ho trovato cose interessanti su const.h
+        // interrupt handling related constants
+
+        #define CAUSE_IP_MASK          0xff000000
+        #define CAUSE_IP(line)         (1U << (24 + (line)))
+        #define CAUSE_IP_BIT(line)     (24 + (line))
+
+        // device starting interrupt line
+        #define DEVINTBASE	3
+
+        // device register length
+        #define DEVREGLEN 	4
+
+        // interrupts available for registers
+        #define DEVINTUSED 	5
+
+        // devices per interrupt line
+        #define DEVPERINT	8
+
+        // device type codes
+        #define NULLDEV	0
+        #define DISKDEV	1
+        #define TAPEDEV	2
+        #define ETHDEV 3
+        #define PRNTDEV 4
+        #define TERMDEV 5
+
+        // interrupt line offset used for terminals
+        // (lots of code must be modified if this changes)
+
+        #define TERMINT	4
+
+        // returns the sign bit of a word ------> questa roba non so se ci serve e non ho capito cosa sia
+        #define SIGNBIT(w) (w & SIGNMASK)
+
+- e anche su arch.h
+        /* Devices per interrupt line */
+        #define N_DEV_PER_IL        8
+
+        #define DEV_IL_START        (N_INTERRUPT_LINES - N_EXT_IL)
+
+        #define IL_IPI              0
+        #define IL_CPUTIMER         1
+        #define IL_TIMER            2
+        #define IL_DISK             3
+        #define IL_TAPE             4
+        #define IL_ETHERNET         5
+        #define IL_PRINTER          6
+        #define IL_TERMINAL         7
+
+        #define EXT_IL_INDEX(il)    ((il) - DEV_IL_START)
+
+        #define INT_DEV_VECTOR(il)	(0x6FE0 + (EXT_IL_INDEX(il) * 4))
+
+- perchè hai fatto quell'array dei devices? Ho letto i tuoi appunti dei 20/08
+ma non capisco a che ci serve di preciso
+
+- che significa linea di interrupt?
+
 
 SYS10
 
