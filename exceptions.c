@@ -317,7 +317,10 @@ void semaphoreOperation (int *semaddr, int weight){
 				pcb_t *p;
 				p=headBlocked(semaddr);
 				if(p!=NULL){
-					if(p->p_resource<=weight || p->p_resource <= *semaddr){
+					if (p->p_resource > weight){
+						p->p_resource = p->p_resource - weight;
+					}
+					else if(p->p_resource<=weight){
 						p = removeBlocked(semaddr);
 						if (p != NULL){
 							p->p_resource=0;
@@ -333,7 +336,7 @@ void semaphoreOperation (int *semaddr, int weight){
 
 			//se il semaforo era o diventa negativo ci blocchiamo, altrimenti modifichiamo il valore del semaforo
 
-			if  (*semaddr <= 0)  {
+			if  (*semaddr < 0)  {
 				if(insertBlocked(semaddr, currentProcess))
 					PANIC();	//currentProcess è dell'initial???
 
@@ -456,6 +459,42 @@ void getCpuTime(cputime_t *global, cputime_t *user){
 
  }
 
+//I/O Device Operation (SYS10)
+void ioDevOp(unsigned int command, int intlNo, unsigned int dnum){
+	int dev;
+	dtpreg_t reg1; //registri dei device normali
+	termreg_t reg2; //registro del terminale
+	int is_read;
+	//controllo se è lettura o scrittura del terminale
+	if ( dnum & 0x10000000 ) {
+		dev=N_EXT_IL+1;
+		dnum= dnum & 0x10000111;
+		is_read=TRUE;
+	}else{
+		dev=intlNo-DEV_IL_START;
+		is_read=FALSE;
+	}
+
+	if (intlNo == IL_TERMINAL){//azioni su terminali
+		reg2=DEV_REG_ADDR(intlNo, dnum);
+		if (is_read){
+			//se leggo il comando va messo in quello che riceve o in quello che legge????
+			reg2->recv_command=command;
+		}else{
+			reg2->transm_status=command;
+		}
+		
+	}else{//azioni su altri device
+		reg1=DEV_REG_ADDR(intlNo, dnum);
+		reg1->command=command;
+	}
+
+	//basta quello che ho fatto sopra per "performare" il comando?
+
+	//la cosa seguente in teoria dovrebbe bloccare il currentProcess nel semaforo del device giusto ma boh
+	semaphoreOperation(&devices[dev][dnum]; -1);
+
+}
 
 
 // Get Process ID SYS11

@@ -236,10 +236,10 @@ Volevo fare anche l caso breakpoint ma centrava con la sys4, quindi provo
 a fare prima quella e poi torno a fare l'handler
 
 
-SYS4 
+SYS4
 
 (ATTENZIONE! : qualsiasi modifica o errore trovato in questa funzione sarà
-anche nelle sys5 e sys6 perché ho fatto copia incolla e fanno praticmamente 
+anche nelle sys5 e sys6 perché ho fatto copia incolla e fanno praticmamente
 la stessa cosa)
 
 Non capisco quasi niente dalle specifiche. Ora cerco di popolare al newArea
@@ -259,7 +259,7 @@ Ho letto quel file di stack overflow e ho visto le tue modifiche a riguardo, per
 non hai toccato le cose di phase1, secondo me dovremmo mettere extern anche nelle
 dichiarazioni di quegli header sennò non siamo coerenti.
 ------------------------------------
-	Si hai ragione, dovremmo aggiustare anche lì, ci avevo pensato ma ero troppo 
+	Si hai ragione, dovremmo aggiustare anche lì, ci avevo pensato ma ero troppo
 	stanca per farlo, dobbiamo correggerlo prima o poi u.u
 -----------------------------------
 
@@ -302,9 +302,9 @@ exception.c
 	tanti noi di es in c usando le systemcall) però essendo comunque istruzioni
 	che si devono fare in kernel mode quando un programma in user mode usa una syscall
 	si gnera una trap (interrupt generata dal programma) e la chiamta viene
-	passata quidni al gestore dei trap (che dobbiamo scrivere più avanti). In 
-	teoria le copie delle oldarea varie che ho fatto servono appunto per fare 
-	il passaggio della syscall, perché mi pare di aver capito che quando 
+	passata quidni al gestore dei trap (che dobbiamo scrivere più avanti). In
+	teoria le copie delle oldarea varie che ho fatto servono appunto per fare
+	il passaggio della syscall, perché mi pare di aver capito che quando
 	chiami le syscall salvi le cose nella sysbp_oldArea mentre quando gestisci
 	le trap le cose vanno messe dei pgmTrap_oldArea
 ---------------------------------
@@ -326,10 +326,10 @@ exception.c
     Ho controllato e quelli dell'anno scorso non lo fanno sto controllo. Uffa.
 	---------------------------------
 		questo dovrebbe servire per assicurarsi che il processo che chiama
-		la terminate non voglia terminare un processo di cui il 
+		la terminate non voglia terminare un processo di cui il
 		currentProcess è discendente?
 		Però non sarebbe un problema, nel caso si uccida il currentProcess
-		perché era figlio del processo che inizialmente il currentProcess 
+		perché era figlio del processo che inizialmente il currentProcess
 		doveva uccidere, la funione funziona correttamente
 	---------------------------------
 
@@ -360,13 +360,13 @@ che non ti torna su quella u.u
 
 SYS5/SYS6
 
-Queste sono praticamente uguali alla sys4 quindi tutte i dubbi su di quella rimangono 
+Queste sono praticamente uguali alla sys4 quindi tutte i dubbi su di quella rimangono
 anche qui, io però faccio copia e incolla e modifico solo le cose che devo modificare
 quidni se scopriamo che la sys4 è sbagliata lo saranno anche queste due
 
 SYS7
 
-Allora dice che l'oldArea del Pcb (che suppongo deva essere recuperata dall'array che 
+Allora dice che l'oldArea del Pcb (che suppongo deva essere recuperata dall'array che
 ho usato anche per le SYS4-5-6) deve essere caricato, ora, dove deve essere caricato?
 Io lo carico sia sia in p_s del pcb corrente che nel processore vero e proprio e commento
 quello del pcb perché nelle specifiche dice che solo il nucleo conosce i pcb.
@@ -375,32 +375,32 @@ L'ho fatta troppo subito, secondo me c'è qualcosa che non ho capito u.u
 SYS8
 
 Ecco che iniziamo con lo user Time e company, quidni penso prorpio che va messo nel pcb,
-vado a modificare le strutture, spero di non dimenticarmene qualcuna (p.s. abbiamo due 
+vado a modificare le strutture, spero di non dimenticarmene qualcuna (p.s. abbiamo due
 types.h: una è quella nostra e una e quella del prof, io le modifico entrambe).
-Ora, noi facciamo iniziare lo userTime e il cpuTime nello scheduler quando si sceglie il 
+Ora, noi facciamo iniziare lo userTime e il cpuTime nello scheduler quando si sceglie il
 processo a cui tocca partire (usiamo una variabile ce si prende lo start time di entrambi),
-quidni quando al processo si toglie la cpu dobbiamo aggiornare il valore. Per il tempo in 
-user mode, questo finisce anche quando faccio una systemcall (che è fatta ovviamente in 
+quidni quando al processo si toglie la cpu dobbiamo aggiornare il valore. Per il tempo in
+user mode, questo finisce anche quando faccio una systemcall (che è fatta ovviamente in
 kernel mode) quindi all'inizio l'handler si occupa di settare bene il tempo utente, mentre
 l'intervallo per la cpu va aggiornato quando al processo viene tolto il controllo,
 e questo succede quando avviene qualche interrupt quidni per aggiornare quel valore ci
-pensa l'handler degli interrupt ad aggiornarlo per bene e quindi a quello ci penserò 
-quando farò l'handler degli interrupt. Per ora per restituire il globalTime che 
-vuole questa funzione basta prendere il tempo di ora e il tempo salvato in 
+pensa l'handler degli interrupt ad aggiornarlo per bene e quindi a quello ci penserò
+quando farò l'handler degli interrupt. Per ora per restituire il globalTime che
+vuole questa funzione basta prendere il tempo di ora e il tempo salvato in
 currentProcess->p_CPUtime e calcolare l'intervallo.
 Una cosa: tu processo, quando finisci il tuo timeslice esci dal processore, ma il tempo
-che passi nel processore va considerato come quello totale che passi nella cpu (quindi 
+che passi nel processore va considerato come quello totale che passi nella cpu (quindi
 la somma di tutti i time slice) o solo il tempo che hai occupato continuamente la cpu?
 
 
 SYS9
 
 Dobbiamo bloccare il processo che chiama nel semaforo del clock, quidni uso la insertBlocked
-con come indirizzo l'indirizzo del semaforo dello pseudoClock. Visto che è comunque 
+con come indirizzo l'indirizzo del semaforo dello pseudoClock. Visto che è comunque
 un semaforo e io mi sto bloccando sul semaforo faccio anche una -1 sul semaforo, ma non so
 se la devo effettivamente fare...io lo faccio u.u
 Poi dice che le cose su questo semaforo vengono sbloccate automaticamente dal nucleo ogni
-100 millisecondi....ora, questo lo gestiremo con gli interrupt? oppure dobbiamo farci un 
+100 millisecondi....ora, questo lo gestiremo con gli interrupt? oppure dobbiamo farci un
 altra cosa che ogni 100 millisecondi ha il solo scopo di sbloccare i processi nel semaforo
 dello pseudo clock? Per ora non lo so, secondo me ci vuole un interrupt però non so bene
 come gestirlo. Però tanto gli costava mettere due timer così uno lo usavi per il time
@@ -410,30 +410,30 @@ millisecondi
 
 SEMAPHOREOPERATIONS
 
-Una cosa che non mi torna è perché per sbloccare il processo non controlliamo il 
-nuovo valore del semaforo invece di vedere il peso, mi ricordo che ne avevamo discusso, per 
-ora ho messo un || ma secondo me si potrebbe controllare direttamente il semaforo 
+Una cosa che non mi torna è perché per sbloccare il processo non controlliamo il
+nuovo valore del semaforo invece di vedere il peso, mi ricordo che ne avevamo discusso, per
+ora ho messo un || ma secondo me si potrebbe controllare direttamente il semaforo
 eliminando completamente il peso, però ricordo che centrava qualcosa con le specifiche.
 Però se controlliamo solo il peso potremmo avere questa situazione: ho un processo bloccato
 che vuole 3 risorse. Il semaforo è a -3. Arriva un processo che libera 2 risorse
 quindi 2<3 non possiamo liberare il processo bloccato, il semaforo diventa -1. Arriva un
 altro processo che libera 1 risorsa e quindi il semaforo è 0 e quindi potrei poter liberare
-il primo processo in coda ma per come lo abbiamo fatto noi visto che 1<3 non lo possiamo 
+il primo processo in coda ma per come lo abbiamo fatto noi visto che 1<3 non lo possiamo
 liberare. Ancora mi è sorta una domanda: noi inizializziamo i semafori a 0 quidni quando
 prendo risorse la prima volto io posso fare anche -100, va bene? Questo in realtà penso
 che dipende perché per l'i/o mi dicono le specifiche ne posso chiedere solo una alla volta
 quidni magari gli altri semafori funzionano diversamente. E quindi qui mi sale un altro
-dubbio: se voglio 3 risorse le posso prendere anche se il semaforo è 0 o devo aspettare 
-che il semaforo si 3? Sono confusa. 
+dubbio: se voglio 3 risorse le posso prendere anche se il semaforo è 0 o devo aspettare
+che il semaforo si 3? Sono confusa.
 
-Altra nota: per come abbiamo fatto noi la funzione abbiamo che le risorse le assegnamo 
-tutte insieme, ovvero se il processo chiede 5 risorse ma ce ne sono solo 3 libere lui 
+Altra nota: per come abbiamo fatto noi la funzione abbiamo che le risorse le assegnamo
+tutte insieme, ovvero se il processo chiede 5 risorse ma ce ne sono solo 3 libere lui
 si blocca. Non credo sia sbagliato ma dobbiamo sapere che succede
 
 Sono andata a aggiustare il timer, perché se ci blocchiamo su un semaforo non sto usando
 più la cpu quidni devo aggiornare il cputimer
 
-Ho trovato questo nella mailing list. Secondo me, per come lo abbiamo fatto noi il 
+Ho trovato questo nella mailing list. Secondo me, per come lo abbiamo fatto noi il
 problema non si pone, secondo te?
 
 	2. Nel paragrafo 3.7.4 "Process Termination" della documentazione di fase 2, c'e' scritto:
@@ -443,22 +443,26 @@ problema non si pone, secondo te?
 		the value of the semaphore must be adjusted. "
 
 	In questo caso, oltre a sistemare il valore del semaforo è anche necessario risvegliare (eventualmente) i processi bloccati su di esso richiamando una semaphore operation?
-	
-	2. dipende, se il processo aveva gia` ottenuto un quantitativo di risorse 
-	sufficienti a sbloccare il successivo allora ha senso che questo venga sbloccato, 
-	ma se si termina un processo a meta` della coda di attesa di un semaforo, 
-	questo non ha ancora certamente ricevuto nessuna risorsa, quindi bisogna soltanto 
+
+	2. dipende, se il processo aveva gia` ottenuto un quantitativo di risorse
+	sufficienti a sbloccare il successivo allora ha senso che questo venga sbloccato,
+	ma se si termina un processo a meta` della coda di attesa di un semaforo,
+	questo non ha ancora certamente ricevuto nessuna risorsa, quindi bisogna soltanto
 	sistemare il valore dell'intero relativo al semaforo.
 
 Ora mi è venuto un dubbio sulla terminate: se terminiamo un processo mentre sta lavorando
 con risorse di un semaforo, dovremmo liberare quelle risorse, come facciamo? Forse ci
 pensa la sys10, ora vedo u.u
-	
+
 
 -----------------------------------------------------------------------------
 Domande:
 - come si comporta la var pseudoClock? Ho visto che la dichiarazione sta in initial
 e poi la modifichiamo nello scheduler, però non mi è chiaro
+
+---------------------------------
+lo pseudoClock è un semaforo, si comporta come i semafori normali
+----------------------------------
 
 - per quanto riguarda i device ho trovato cose interessanti su const.h
         // interrupt handling related constants
@@ -527,3 +531,60 @@ Non ho capito niente, o meglio non trovo le cose, uff sono stanca, la vedo doman
 SYS11
 
 Semplice e intutitiva, nietne da dire
+
+22/08
+
+Nel test quando si creano i semafori sono dei semplici interi, diventano
+delle vere e proepire strutture nel momento in cui faccio la insertBlocked
+(vedi codice in asl)
+
+
+SEMOP
+
+Abbiamo risolto il dubbio del peso aggionrando le risorse di cui abbiamo
+bisongo nel primo processo bloccato
+
+SYS4/5/6
+
+Per la cosa dei flag forese il flag è un intero e il flag[1] (ecc) delle
+specifiche si riferisce a "primo bit del flag, secondo bit" (ecc).
+Questo va messo in cpsr vedi se c'è quanlche funzione già fatta
+per settare quel registro
+
+SYS10
+
+Per Sara: quello degli americani non ci sere perché è come quello dell'anno
+scorso, c'è un flag, non c'è questa cosa strana nostra, quindi sono di nuovo
+non sapendo che fare
+
+Ok, con l'aiuto di Giacomo sono arrivata alla conclusione che non può far 
+altro che con "bit più significativo" vuol dire che in a4 ci sarà scritto 
+qualcosa del tipo 10000xxx oppure 00000xxx, quindi ho fatto questo:
+
+if ( dnum & 0x10000000 ) {
+		dev=N_EXT_IL+1;
+		dnum= dnum & 0x10000000;
+	}else{
+		dev=intlNo-DEV_IL_START;
+	}
+ 
+che praticamente vede se il bit più significativo di dnum è a 1 allora
+devo leggere dal terminale (e ho deciso che è l'ultimo nel nostro array
+di semafori)e poi non so se posso fare  dnum= dnum & 0x10000111; ma 
+praticamente visto che il dnum deve essere un numero da 0 a 7 se c'è l'uno
+nel più significativo allora devo ambiarlo e farlo tornare a essere un 
+numero da 0 a 7. L'else ci sta perchè il nostro array inizia da 0 e per come
+sono le linee dell'interrrupt nei device noi usiamo solo da 3 a 7, quidi
+il ramo else è fatto per aggiustare questa cosa
+
+Ora dovrei andare a scrivere sui registri ma non  sino sicura che cada bene
+come lo vado a fare ora (perché questa sys call ce l'ha fatta così 
+complicata??? L'anno scorso era più semplice TT__TT)
+
+Non so bene se con una read devo scrivere nel registro del recive o del 
+transmit... penso recive perché per leggere qualcosa devo averla ricevuta
+
+Ok, non so che altro fare e soprattutto come farlo, comunque questa 
+dovrebbe essere fatta dopo aver uninterrupt (credo?), più ci sto e più
+non la capisco. Ho deciso che è meglio andare avanti e lavorare con gli
+interrupt così magari vediamo bene come funzionano quelli e poi tornarci
