@@ -500,6 +500,17 @@ lo pseudoClock è un semaforo, si comporta come i semafori normali
         #define SIGNBIT(w) (w & SIGNMASK)
 
 - e anche su arch.h
+ 	/*
+         * Interrupt lines
+         */
+
+        #define N_INTERRUPT_LINES   8
+
+        #define N_IL                N_INTERRUPT_LINES
+
+        /* Number of interrupt lines available to devices */
+        #define N_EXT_IL 5
+
         /* Devices per interrupt line */
         #define N_DEV_PER_IL        8
 
@@ -567,7 +578,10 @@ if ( dnum & 0x10000000 ) {
 	}else{
 		dev=intlNo-DEV_IL_START;
 	}
- 
+----------------------------------------------------
+if ( dnum & 0x10000000 ) { // vero sse il bit più significativo era acceso, giusto?
+----------------------------------------------------
+
 che praticamente vede se il bit più significativo di dnum è a 1 allora
 devo leggere dal terminale (e ho deciso che è l'ultimo nel nostro array
 di semafori)e poi non so se posso fare  dnum= dnum & 0x10000111; ma 
@@ -588,3 +602,68 @@ Ok, non so che altro fare e soprattutto come farlo, comunque questa
 dovrebbe essere fatta dopo aver uninterrupt (credo?), più ci sto e più
 non la capisco. Ho deciso che è meglio andare avanti e lavorare con gli
 interrupt così magari vediamo bene come funzionano quelli e poi tornarci
+
+23/08
+Secondo me quello che quelli degli anni scorsi facevano nell'interrupt handler
+noi dobbiamo farlo nella sys10. Sto cercando info a riguardo nei vari manuali.
+Non riesco a trovare la definizione dei registri dei dispoditivi e dei terminali,
+dove sono? Mi serve per capire il tipo dei campi.
+
+Ogni device ha 5 linee di interrupt disponibili.(N_EXT_IL=5)
+
+Five words, from 0x20 to 0x30, show the status of active devices. Each word
+represent a device line:
+0x20 Disks
+0x24 Tapes
+0x28 Netwok
+0x2C Printers
+0x30 Terminals
+
+For each device line, if a specific device i is enable, i th bit in representing
+word has value 1.
+
+ ---> Dobbiamo controllare se il device è attivo?
+
+ 2.1.6 Pending Interrupt Bitmap
+Most of the interrupt lines are shared through all the devices of the same class,
+to identify which device is requesting for interrupt there are five registers from
+address 0x6FE0 to 0x6FF0 that hold a bitmap of interrupting devices per inter-
+rupt line.
+14This region is organized exactly as the Installed Device Table:
+0x6FE0 Disks
+0x6FE4 Tapes
+0x6FE8 Network
+0x6FEC Printers
+0x6FF0 Terminals
+For each word, i bit is set if i th device on that line is requesting for interrupt.
+
+Nel manuale dice:
+    Interrupt lines 3-7 are used for external devices. Interrupt lines 0-2 are for internally
+    generated interrupts. Lines 0-1 are present for future multiprocessor support, but
+    currently unused.
+
+Quindi secondo me la sys10 la chiama l'interrupt handler come dicevi tu.
+Se arriva in interrupt dalle linee 0-2 l'interrupt handler fa le sue cose, altrimenti
+chiama la sys 10.
+
+Il manutale dice:
+    Given an interrupt line (IntLineNo) and a device number (DevNo) one can compute
+    the starting address of the devices device register:
+    devAddrBase = 0x0000.0040 + ((IntlineNo - 3) * 0x80) + (DevNo * 0x10)
+
+DEV_REG_ADDR serve per calcolare l'inizio del registro di device. sta in arch.h
+
+Sto seguendo passo passo il manuale di uarm, in particolare il capitolo 5 che
+spiega come i device ricevono/trasmettono cose.
+In pratica tutto sta nell'accedere ai campi dei registri di dispositivo ma dato
+che non ho trovato la loro definizione ho usato dei puntatori ad unsigned int.
+Al massimo basterà cambiare il loro tipo successivamente.
+Quello che non mi è chiaro è che le operazioni sui device potrebbero (e forse
+dovrebbero) essere fatte dall'interrupt handler, quindi perchè questo dovrebbe
+chiamare una sys call per farle? Ci hanno detto di impostare il sistema così solo
+per complicarci la vita o tutto ha un senso? Non so, ho la sensazione che mi stia
+sfuggendo qualcosa... (Mi sembra di scrivere un libro giallo xD RISOLVIAMO IL MISTEROOO)
+
+Pensandoci può essere che vogliano l'interrupt handler si occupi di scegliere
+l'interrupt da gestire, secondo le regole di priorità. Quindi la sys si occuperebbe
+solo di fare ciò che l'interrupt handler ha deciso. Ha senso, credo.
