@@ -461,19 +461,22 @@ void getCpuTime(cputime_t *global, cputime_t *user){
 
 //I/O Device Operation (SYS10)
 void ioDevOp(unsigned int command, int intlNo, unsigned int dnum){
-	int dev;
+	
+	int dev; //perchè ci serve? 
 	dtpreg_t devReg; //registri dei device normali
 	termreg_t termReg; //registro del terminale
 	int is_read;
 
 	if(dnum >= 0)&&(dnum <=7){//caso accesso a device tranne scrittura su terminale
 		dev = intlNo - DEV_IL_START; //in arch.h: DEV_IL_START (N_INTERRUPT_LINES - N_EXT_IL) --> 8-5 = 3
+		
 		is_read = FALSE;
 	}
 	else{
 		if(dnum & 0x10000000){// caso scrittura su terminale
 			dev = N_EXT_IL+1;
 			dnum = dnum & 0x10000111;
+			
 			is_read = TRUE;
 		}
 		else{ //abbiamo chiamato la sys10 con un dnum che non esiste
@@ -493,7 +496,8 @@ void ioDevOp(unsigned int command, int intlNo, unsigned int dnum){
 		transmStatus = termReg + 0x8;
 		transmCommand = termReg + 0xC;
 
-		//A terminal operation is started by loading the appropriate value(s) into the TRANSM COMMAND or RECV COMMAND field.
+		//A terminal operation is started by loading the appropriate value(s) into the 
+		//TRANSM COMMAND or RECV COMMAND field.
 		*command=command;//non so se si può fare
 		if(is_read){//dobbiamo leggere/ricevere
 			*recvCommand==2; //dico che deve trasmettere/ricevere
@@ -507,11 +511,15 @@ void ioDevOp(unsigned int command, int intlNo, unsigned int dnum){
 interrupt is raised and an appropriate status code is set in TRANSM STATUS or
 RECV STATUS respectively;*/
 
-				/* Solleviamo un interrupt e poi l'interrupt handler vedrà che siamo noi e ci manda un ACK*/
+				/* Solleviamo un interrupt e poi l'interrupt handler vedrà che 
+				siamo noi e ci manda un ACK*/
 			}
 		}
 		else{//dobbiamo scrivere/trasmettere
 			*transmCommand==2; //dico che deve trasmettere/ricevere
+			
+			/* Fare qualcosa per trasmettere */
+			
 			if(*transmStatus==5){
 				/* scrittura andata a buon fine */
 			}
@@ -533,7 +541,8 @@ RECV STATUS respectively;*/
 
 		}
 	}
-	/*
+	
+	/* -------------- Cose di Olga: -----------------------
 	//controllo se è lettura o scrittura del terminale
 	if ( dnum & 0x10000000 ) { // vero sse il bit più significativo era acceso
 		dev = N_EXT_IL+1;
@@ -543,7 +552,7 @@ RECV STATUS respectively;*/
 		dev = intlNo - DEV_IL_START; //in arch.h: DEV_IL_START (N_INTERRUPT_LINES - N_EXT_IL) --> 8-5 = 3
 		is_read = FALSE;
 	}
-	*/
+	
 	if (intlNo == IL_TERMINAL){//azioni su terminali
 		termReg=DEV_REG_ADDR(intlNo, dnum);
 		if (is_read){
@@ -562,7 +571,7 @@ RECV STATUS respectively;*/
 
 	//la cosa seguente in teoria dovrebbe bloccare il currentProcess nel semaforo del device giusto ma boh
 	semaphoreOperation(&devices[dev][dnum]; -1);
-
+	*/
 }
 
 
