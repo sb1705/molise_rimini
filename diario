@@ -584,16 +584,18 @@ if ( dnum & 0x10000000 ) { // vero sse il bit più significativo era acceso, giu
 
 che praticamente vede se il bit più significativo di dnum è a 1 allora
 devo leggere dal terminale (e ho deciso che è l'ultimo nel nostro array
-di semafori)e poi non so se posso fare  dnum= dnum & 0x10000111; ma 
+di semafori)e poi non so se posso fare  dnum= dnum & 0x00000111; ma 
 praticamente visto che il dnum deve essere un numero da 0 a 7 se c'è l'uno
-nel più significativo allora devo ambiarlo e farlo tornare a essere un 
+nel più significativo allora devo cambiarlo e farlo tornare a essere un 
 numero da 0 a 7. L'else ci sta perchè il nostro array inizia da 0 e per come
 sono le linee dell'interrrupt nei device noi usiamo solo da 3 a 7, quidi
 il ramo else è fatto per aggiustare questa cosa
 
-Ora dovrei andare a scrivere sui registri ma non  sino sicura che cada bene
+Ora dovrei andare a scrivere sui registri ma non  sino sicura che vada bene
 come lo vado a fare ora (perché questa sys call ce l'ha fatta così 
 complicata??? L'anno scorso era più semplice TT__TT)
+
+La struttura dei registri dei device la troviamo in uArmtypes
 
 Non so bene se con una read devo scrivere nel registro del recive o del 
 transmit... penso recive perché per leggere qualcosa devo averla ricevuta
@@ -667,3 +669,129 @@ sfuggendo qualcosa... (Mi sembra di scrivere un libro giallo xD RISOLVIAMO IL MI
 Pensandoci può essere che vogliano l'interrupt handler si occupi di scegliere
 l'interrupt da gestire, secondo le regole di priorità. Quindi la sys si occuperebbe
 solo di fare ciò che l'interrupt handler ha deciso. Ha senso, credo.
+
+
+26/08
+
+
+
+BREAKPOINT
+
+Le specifiche non dicono niente sul controllare o meno il mode con cui lo chiamo (user o
+kernel) quindi per ora non faccio controlli di questo genre
+Qui c'era un errore nelle specifiche, dovrebbe essere
+
+	"the lower 4 bits of SYS/Bp Old Area’s cpsr register are copied in the most significant
+	 positions of ProcBlk SYS/Bp New Area’s a1 register."
+
+e non
+	"the lower byte of SYS/Bp Old Area’s cpsr register is copied in the higher byte of
+	 ProcBlk SYS/Bp New Area’s a1 register"
+
+Questa cosa però non la so fara. Sara, qualche idea?
+
+Tutto quello che ho fatto però è praticamente quello che dicono le specifiche quasi parola
+per parola
+
+TRAP E TLB HANDLER
+
+fanno praticamente la stessa cosa che fa il brack point, quidni pensavo di fare una funzione
+che decide quale handler usare (come hanno fatto gli altri)
+Ora la scrivo tutta, ma probabilmente si può fare qualcosa.
+
+Non sono molto sicura di come gestire il prendere la causa per la trap... metto due modi 
+diversi: uno è come lo hanno fatto quelli da cui copiamo per le sysCall l'altro è quello 
+che è venuto in mente a me: prendo il registro di causa dove dovrebbe essere effettivamente
+messa la causa (pgmTrap_old->CP15_Cause) e lo uso come parametro della macro. Faccio così
+perché viene fatti tipo un'operazione bit a bit come corpo della macro, quindi forse a senso.
+Non so, questo è da provare e vedere cosa succede
+
+(per il tlb handler anche le specifiche sono esattamente copia incolla del trap (e penso che si
+sia anche dimenticato di cambiare un trap in tbl, spero sia un suo errore di battiture snnò non
+avrebbe senso)
+
+In teoria (credo) in tutti gli handler dovrei andarci solo in kernel mode quindi all'inizio 
+della gestione della cosa stoppo lo user time del processo
+
+INTERRUPT HANDLER
+
+Inizio a vedere l'interrupt handler.
+
+Le specifiche dicono che la il numero della linea dove pende l'interrupt è salvato in 
+CP15_Cause.IP, e uso la macro CAUSE_IP_GET(cause, int_no) perché la descrizione di 
+questa macro è : " Returns 1 if the interrupt int_no is pending"
+Ora, suppongo che come prendiamo la causa vada bene (infondo anche gli altri hanno fatto 
+così, però mi da un po' fastidio perché le cose sono così poco chiare, devi praticamente
+provare a indovinare per tutto. Comunque la cosa che interpreto io è: "ti da 1 se la causa
+è la linea di interrupt int_no"... però boh, ora mi vengono i dubbi sul se ho usato bene le 
+altr cause... poco chiaro, poco chiaro.
+
+Ora vedo perché vogliamo distinguere il time-slice dallo pseudo clock: l'interrupt di uno 
+e dell'altro fanno cose diverse.
+Infatti questo è il momento giusto di "svegliare tutti i processi" come dicevano le specifiche
+	("Each process waiting on this semapgore is unlocked every 100 milliseconds 
+	automatically by the nucleus").
+Vado a modificare lo scheduler appropriatamente
+
+Sto prendendo come guida il codice dei soliti e ho notato che il loro interrupt di pseudoclock
+non ferma il processo attuale. Se arriva l'interrupt di pseudoclock, devo o non devo fermare
+il processo attuale, metterlo in coda e far partire il prossimo? Forse no, perché poverino, non
+è giusto che venga portato via dal suo timeslice senza che faccia i/o o cose del genere
+
+Io praticamente voglio copiare quando posso, ma ora mi è sorto un dubbio: posso avere più di
+un processo bloccato contemporaneamnte nello pseudoClock? Perché i tipi usano il while,
+ma non penso che più di un porcesso possa essere bloccato sullo pseudoclock.
+Nel caso ci possano essere più di uno di processi bloccati,(perché effettivamente abbiamo 
+una waitClock che ti blocca sullo pseudoClock), come facciamo? La nostra semaphorOperation
+sblocca i processi solo quando il semaforo diventa >0. Se togliamo il controllo che dopo il
+cambio il semaforo debba essere >0 funziona. Infatti se libero 1 e il semafore è < 0 ma la
+risorsa richiesta dal primo processo in coda è 1, allora lo posso sbloccare e in questo modo
+potrei fare il while per sbloccare tutti i processi bloccati nello pseudoClock.
+La cosa è data anche da questa frase :
+	"Each process waiting on this semapgore is unlocked
+	every 100 milliseconds automatically by the nucleus."
+Quell'each vuol dire "ognuno dei processi che sono bloccati ORA vanno sbloccati tutti insieme
+allo scadere dei 100 millisecondi" oppure vuol dire "ogni volta che un processo si blocca su 
+questo semaforo esso verrà sbloccato allo scadere dei 100 millisecondi"? 
+Sara, rifeltti su questa cosa e dimmi a che conclusione arrivi, forse va visto come lo usa
+nel test per capire se è possibile avere più di un processo.
+Ho appena trovato questa frase:
+	"A SYS3 operation on the pseudo clock should unlock all the waiting processes."
+Che mi sembra implichi che possa esserci più di un processo. [Altro piccolo dubbio, con 
+"waiting processes" intende quelli che aspettano solo lo pseudoClock o anche tutti gli 
+altri processi che aspettano? Penso solo quelli dello pseudoClock, però chiedere conferma
+non fa male]
+Conclusione: secondo me ci possono essere più processi nello pseudoClock, quindi lascio il
+while però non vado a cambiare il controllo nella semaphoreOperation, per fare quello voglio
+prima la tua opinione.
+
+Non capisco molto cosa fa per i device di i/o.... dovremmo vedere se c'è stata la sys10 e 
+ovviamente, come il resto delle cose, le specifiche sono ambigue. Ho deciso di interpretarlo
+così: se il semaforo associato all'interrupt è negativo allora sblocco il processo bloccato 
+(anche qui c'è sempre il fatto che se è possibile che più di un processo è bloccato sullo 
+stesso sempaforo dobbiamo togliere quel controllo)
+Uso la macro   CDEV_BITMAP_ADDR(line)  per vedere esattamente su quele device sono fermo, 
+ma non sono sicura di averlo fatto bene.
+Dice poi che dobbiamo mettere lo stato del registro di i/o nell'a1 del processo appena 
+sbloccato. Come recupero il processo bloccato? 
+2 casi:
+	-sblocco con la semaphoreOperation e modifichiamo quest'ultima in modo che ritorni
+	un puntatore al processo bloccato
+	-sblocchiam il processo a mano qui nel gestore
+Non so che fare quindi mi è venuto di fare una via di mezzo (vedi codice). Qui dico solo che
+presuppongo che il processo che sblocchiamo è quello in testa alla coda dei processi bloccati,
+sono troppo stanca ora per vedere se è giusto ma dovrebbe essere così.
+Mi è venuto un dubbio: per il registro dei device dovrei fare una variabile puntatore o solo
+la variabile? Per ora la faccio solo variabile, sono troppo stanca per pensare altro, Sara se
+ce la fai vedi tu se si dovrebbe fare l'uno o l'altro.
+
+Scusa Sara, ora sono troppo stanca, ti lascio a questo. 
+NOTA: ho fatto una funzione a parte per i device perché i device (che non sono terminali) 
+fanno tutti la stessa cosa quindi poi nell'interrupt handler andrà righiamata questa
+funzione per ogni device.
+
+Cose che ci sono ancora da capire che non ho capito: che fa l'interrupt handler quando non
+c'era stata una richiesta di sys10 prima di alzare l'interrupt?
+Cosa si fa nel caso del terminale? Come distinguo tra lettura e scrittura?
+
+p.s. scusa se c'è qualche incoerenza sono davvero stanca

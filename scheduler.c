@@ -51,8 +51,27 @@ void scheduler(){
 		clock_end = SCHED_PSEUDO_CLOCK;
 	}
 
+	if( clock_end <= slice_end ){
+		setTIMER(clock_end);
+	 	current_timer = PSEUDO_CLOCK;
+	}
+	else{
+		setTIMER(slice_end);
+		current_timer = TIME_SLICE;
+	}
+
+	/*---------Altro modo--------*/
+	//
+	//
+	//Qui di seguito setto il timer in maniera diversa, però visto che salvo in che timer stiamo forse è giusto settarlo prima (come è fatto negli if) e non facendo questo minimo qui, lo lascio comunque commentato
+	//
+	//
+	/*------Decommenta il seguito se cambi idea------*/
+
 	//setto il timer a quello che finisce prima fra pseudo-clock e time slice
-	setTIMER(MIN(slice_end, clock_end));
+	//setTIMER(MIN(slice_end, clock_end));
+
+	/*-------fine roba alternativa---*/
 
 	//i controlli che seguono da questo momento creano un ritardo secondo me, ma non riesco a pensare a un modo coerente di settare il tempo
 	//utente e CPU nel caso in cui la setTimer sia fatta come ultima operazione, per ora lo lascio così, magari ci si pensa dopo
