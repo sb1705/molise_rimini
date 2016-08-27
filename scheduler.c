@@ -52,11 +52,11 @@ void scheduler(){
 	}
 
 	if( clock_end <= slice_end ){
-		setTIMER(clock_end);
+		//setTIMER(clock_end);
 	 	current_timer = PSEUDO_CLOCK;
 	}
 	else{
-		setTIMER(slice_end);
+		//setTIMER(slice_end);
 		current_timer = TIME_SLICE;
 	}
 
@@ -96,7 +96,13 @@ void scheduler(){
 		CPUTimeStart = getTODLO();	//se comincia l'esecuzione di un nuovo processo riparte il conteggio del tempo di CPU
 	}
 	userTimeStart = getTODLO();	//riparte il conteggio del tempo utente perché noi entriamo nello scheduler come kernel quindi dobbiamo far ripartire il tempo utente quando usciamo
-
+	
+	if(current_timer = PSEUDO_CLOCK){
+		setTIMER(clock_end);
+	}
+	else{
+		setTIMER(slice_end);	
+	}
 	//carico nel processore lo stato del processo scelto come prossimo
 	LDST( &current_process->p_s );
 }
