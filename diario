@@ -718,7 +718,7 @@ avrebbe senso)
 In teoria (credo) in tutti gli handler dovrei andarci solo in kernel mode quindi all'inizio 
 della gestione della cosa stoppo lo user time del processo
 
------------------------------------------------------------
+-------------------------27/08----------------------------------
 Mi devo riguardare come funziona il tempo in un processo. Siamo noi ogni volta che dobbiamo
 modificare i campi del procBlock giusto? Il fatto che tu dici di stoppare il tempo
 è perchè gli assegni il tempo all'inizio della funzione e non alla fine?
@@ -757,6 +757,13 @@ non ferma il processo attuale. Se arriva l'interrupt di pseudoclock, devo o non 
 il processo attuale, metterlo in coda e far partire il prossimo? Forse no, perché poverino, non
 è giusto che venga portato via dal suo timeslice senza che faccia i/o o cose del genere
 
+-------------27/08----------------
+Per me no.
+Comunque ho letto nei commenti che volevi mettere la setTimer appena prima di caricare il nuovo processo
+ho provato a mettere un controllo sul timer in uso ma dato che non ho studiato bene come funziona
+il tempo sentiti libera di portare le cose com'erano prima se quello che ho fatto non ha senso.
+------------------------
+
 Io praticamente voglio copiare quando posso, ma ora mi è sorto un dubbio: posso avere più di
 un processo bloccato contemporaneamnte nello pseudoClock? Perché i tipi usano il while,
 ma non penso che più di un porcesso possa essere bloccato sullo pseudoclock.
@@ -784,6 +791,16 @@ Conclusione: secondo me ci possono essere più processi nello pseudoClock, quind
 while però non vado a cambiare il controllo nella semaphoreOperation, per fare quello voglio
 prima la tua opinione.
 
+--------------27/08--------------------
+Anche secondo me ci può essere più di un processo che aspetta perchè
+teoricamente lo pseudoClock serve anche (o solo?) per mantere l'allineamento dei processi
+nel tempo. Quindi allo scadere dei 100 millisecondi li sblocchiamo tutti.
+("A sys3 operation on the pseudo clock should unlock all the waiting processes")
+Mi viene un dubbio, togliere quel controllo cambia il comportamento della sys3 anche 
+quando la chiamiamo per gli altri semafori... Non è che ci incasina tutto toglierlo?
+Solo che al momento non mi viene in mente altro modo di sbloccarli tutti.
+---------------------------------------
+
 Non capisco molto cosa fa per i device di i/o.... dovremmo vedere se c'è stata la sys10 e 
 ovviamente, come il resto delle cose, le specifiche sono ambigue. Ho deciso di interpretarlo
 così: se il semaforo associato all'interrupt è negativo allora sblocco il processo bloccato 
@@ -796,6 +813,9 @@ sbloccato. Come recupero il processo bloccato?
 2 casi:
 	-sblocco con la semaphoreOperation e modifichiamo quest'ultima in modo che ritorni
 	un puntatore al processo bloccato
+		---------27/08-------
+		Non penso che possiamo decidere noi cosa ritorna la semaphoreOperation
+		---------------------
 	-sblocchiam il processo a mano qui nel gestore
 Non so che fare quindi mi è venuto di fare una via di mezzo (vedi codice). Qui dico solo che
 presuppongo che il processo che sblocchiamo è quello in testa alla coda dei processi bloccati,
@@ -811,6 +831,39 @@ funzione per ogni device.
 
 Cose che ci sono ancora da capire che non ho capito: che fa l'interrupt handler quando non
 c'era stata una richiesta di sys10 prima di alzare l'interrupt?
+-------------------------
+Può accadere?
+-------------------------
 Cosa si fa nel caso del terminale? Come distinguo tra lettura e scrittura?
 
 p.s. scusa se c'è qualche incoerenza sono davvero stanca
+
+27/08
+
+Ho guardato le cose che hai fatto e mi sembra vada tutto bene.
+La maggior parte dei tuoi dubbi secondo me deriva dal fatto che non si capisce bene
+come dovremmo usare questa sys10.
+La mia idea è che l'utente chiama la sys10 dicendo cosa vuole fare e su che terminale.
+La sys10 vede che device è, imposta il suo registro e chiama l'Interrupt Handler
+L'interrupt handler 
+- manda un ACK a chi l'ha chiamato (vedi primo pallino elenco pag 10 phase2)
+- fa una sys3 sul semaforo corrispondente al device. Magari nella sys3 possiamo mettere
+  un controllo in modo che:
+  se il semaforo chiamato è quello dello pseudoClock e il weight e 1
+	sblocchi tutti i processi fermi su quel semaforo e li metti nella readyQueue
+  altrimenti
+  	fai la sys3 come scritta fin'ora
+  
+  che ne pensi?
+  
+La tua funzione intDev se ci pensi fa quello che fa anche la sys10, quindi secondo me
+non è necesaria però mi piacciono queste operazioni per salvare lo status:
+	unblck_proc = headBlocked(sem);
+	semaphoreOperation(devices[int_no-DEVINTBASE][devnumb],1); //device starting interrupt line DEVINTBASE = 3 --> const.h
+	unblck_proc->a1=devReg.status; //il primo è un puntatore, il secondo una struct quindi -> . dovrebbero andare bene
+quindi secondo me andrebbero fatte alla ricezione di un interrupt da una linea di device.
+
+Non mi torna in che modo l'interrupt handler possa avere più interrupt pendenti, 
+comunque ora sono le 10.40 e stamattina volevo anche fare un esame, io propongo di sentirci
+appena puoi per fare un po' il punto della situazione e chiarirci i dubbi sul tempo e sugli 
+interrupt e la loro gestione che sono un po' i nostri punti critici.
