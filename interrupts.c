@@ -63,7 +63,7 @@ void intDev(int int_no){ //gestore dell'interruptdi device, ho come argomento la
 	pcb_t *unblck_proc; //processo appena sbloccato
 	dtpreg_t devReg; //registro del device
 	devnumb=CDEV_BITMAP_ADDR(int_no);
-	sem=&devices[int_no-3][devnumb];
+	sem=&devices[int_no-DEVINTBASE][devnumb];
 	devReg=DEV_REG_ADDR(int_no, devnumb);
 	//da qui in poi Sara fai attenzione a come uso i puntatori che come al solito non sono sicura
 
