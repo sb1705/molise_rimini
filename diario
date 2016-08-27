@@ -699,6 +699,11 @@ fanno praticamente la stessa cosa che fa il brack point, quidni pensavo di fare 
 che decide quale handler usare (come hanno fatto gli altri)
 Ora la scrivo tutta, ma probabilmente si può fare qualcosa.
 
+-----------------------------------------
+Si potrebbe fare una funzione unica ma dato che non ce lo specifica per ora pensiamo a finire
+ci penseremo quando sapremo che tutto funziona
+-----------------------------------------
+
 Non sono molto sicura di come gestire il prendere la causa per la trap... metto due modi 
 diversi: uno è come lo hanno fatto quelli da cui copiamo per le sysCall l'altro è quello 
 che è venuto in mente a me: prendo il registro di causa dove dovrebbe essere effettivamente
@@ -712,6 +717,20 @@ avrebbe senso)
 
 In teoria (credo) in tutti gli handler dovrei andarci solo in kernel mode quindi all'inizio 
 della gestione della cosa stoppo lo user time del processo
+
+-----------------------------------------------------------
+Mi devo riguardare come funziona il tempo in un processo. Siamo noi ogni volta che dobbiamo
+modificare i campi del procBlock giusto? Il fatto che tu dici di stoppare il tempo
+è perchè gli assegni il tempo all'inizio della funzione e non alla fine?
+Perchè la cosa più intuitiva che veniva da fare a me era:
+salvare il tempo in cui entriamo
+fare tutte le operazioni
+e fare userTime = userTime - ( getTODOLOW() - tempo in cui siamo entrati )
+In questo modo allo userTime sottrae il tempo che abbiamo passato nella gestione della syscall
+questo perchè nella mia testa userTime e GlobalTime si incrementano da soli con il clock ma non
+è così, vero?
+
+------------------------------------------------------------
 
 INTERRUPT HANDLER
 
