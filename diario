@@ -867,3 +867,4 @@ Non mi torna in che modo l'interrupt handler possa avere più interrupt pendenti
 comunque ora sono le 10.40 e stamattina volevo anche fare un esame, io propongo di sentirci
 appena puoi per fare un po' il punto della situazione e chiarirci i dubbi sul tempo e sugli 
 interrupt e la loro gestione che sono un po' i nostri punti critici.
+Un'altra cosa che dobbiamo fare assolutamente è cambiare il nome alla dir!
