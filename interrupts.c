@@ -69,8 +69,8 @@ void intDev(int int_no){ //gestore dell'interruptdi device, ho come argomento la
 
 	if (*sem < 0){
 		unblck_proc = headBlocked(sem);
-		semaphoreOperation(devices[int_no-3][devnumb],1);
-		unblck_proc->a1=devReg.status; //il mio uso di -> o . è completamente aritrario
+		semaphoreOperation(devices[int_no-DEVINTBASE][devnumb],1); //device starting interrupt line DEVINTBASE = 3 --> const.h
+		unblck_proc->a1=devReg.status; //il primo è un puntatore, il secondo una struct quindi -> . dovrebbero andare bene
 	}
 
 }
