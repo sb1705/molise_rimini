@@ -568,8 +568,8 @@ Per Sara: quello degli americani non ci sere perché è come quello dell'anno
 scorso, c'è un flag, non c'è questa cosa strana nostra, quindi sono di nuovo
 non sapendo che fare
 
-Ok, con l'aiuto di Giacomo sono arrivata alla conclusione che non può far 
-altro che con "bit più significativo" vuol dire che in a4 ci sarà scritto 
+Ok, con l'aiuto di Giacomo sono arrivata alla conclusione che non può far
+altro che con "bit più significativo" vuol dire che in a4 ci sarà scritto
 qualcosa del tipo 10000xxx oppure 00000xxx, quindi ho fatto questo:
 
 if ( dnum & 0x10000000 ) {
@@ -584,23 +584,23 @@ if ( dnum & 0x10000000 ) { // vero sse il bit più significativo era acceso, giu
 
 che praticamente vede se il bit più significativo di dnum è a 1 allora
 devo leggere dal terminale (e ho deciso che è l'ultimo nel nostro array
-di semafori)e poi non so se posso fare  dnum= dnum & 0x00000111; ma 
+di semafori)e poi non so se posso fare  dnum= dnum & 0x00000111; ma
 praticamente visto che il dnum deve essere un numero da 0 a 7 se c'è l'uno
-nel più significativo allora devo cambiarlo e farlo tornare a essere un 
+nel più significativo allora devo cambiarlo e farlo tornare a essere un
 numero da 0 a 7. L'else ci sta perchè il nostro array inizia da 0 e per come
 sono le linee dell'interrrupt nei device noi usiamo solo da 3 a 7, quidi
 il ramo else è fatto per aggiustare questa cosa
 
 Ora dovrei andare a scrivere sui registri ma non  sino sicura che vada bene
-come lo vado a fare ora (perché questa sys call ce l'ha fatta così 
+come lo vado a fare ora (perché questa sys call ce l'ha fatta così
 complicata??? L'anno scorso era più semplice TT__TT)
 
 La struttura dei registri dei device la troviamo in uArmtypes
 
-Non so bene se con una read devo scrivere nel registro del recive o del 
+Non so bene se con una read devo scrivere nel registro del recive o del
 transmit... penso recive perché per leggere qualcosa devo averla ricevuta
 
-Ok, non so che altro fare e soprattutto come farlo, comunque questa 
+Ok, non so che altro fare e soprattutto come farlo, comunque questa
 dovrebbe essere fatta dopo aver uninterrupt (credo?), più ci sto e più
 non la capisco. Ho deciso che è meglio andare avanti e lavorare con gli
 interrupt così magari vediamo bene come funzionano quelli e poi tornarci
@@ -704,8 +704,8 @@ Si potrebbe fare una funzione unica ma dato che non ce lo specifica per ora pens
 ci penseremo quando sapremo che tutto funziona
 -----------------------------------------
 
-Non sono molto sicura di come gestire il prendere la causa per la trap... metto due modi 
-diversi: uno è come lo hanno fatto quelli da cui copiamo per le sysCall l'altro è quello 
+Non sono molto sicura di come gestire il prendere la causa per la trap... metto due modi
+diversi: uno è come lo hanno fatto quelli da cui copiamo per le sysCall l'altro è quello
 che è venuto in mente a me: prendo il registro di causa dove dovrebbe essere effettivamente
 messa la causa (pgmTrap_old->CP15_Cause) e lo uso come parametro della macro. Faccio così
 perché viene fatti tipo un'operazione bit a bit come corpo della macro, quindi forse a senso.
@@ -715,7 +715,7 @@ Non so, questo è da provare e vedere cosa succede
 sia anche dimenticato di cambiare un trap in tbl, spero sia un suo errore di battiture snnò non
 avrebbe senso)
 
-In teoria (credo) in tutti gli handler dovrei andarci solo in kernel mode quindi all'inizio 
+In teoria (credo) in tutti gli handler dovrei andarci solo in kernel mode quindi all'inizio
 della gestione della cosa stoppo lo user time del processo
 
 -------------------------27/08----------------------------------
@@ -736,19 +736,19 @@ INTERRUPT HANDLER
 
 Inizio a vedere l'interrupt handler.
 
-Le specifiche dicono che la il numero della linea dove pende l'interrupt è salvato in 
-CP15_Cause.IP, e uso la macro CAUSE_IP_GET(cause, int_no) perché la descrizione di 
+Le specifiche dicono che la il numero della linea dove pende l'interrupt è salvato in
+CP15_Cause.IP, e uso la macro CAUSE_IP_GET(cause, int_no) perché la descrizione di
 questa macro è : " Returns 1 if the interrupt int_no is pending"
-Ora, suppongo che come prendiamo la causa vada bene (infondo anche gli altri hanno fatto 
+Ora, suppongo che come prendiamo la causa vada bene (infondo anche gli altri hanno fatto
 così, però mi da un po' fastidio perché le cose sono così poco chiare, devi praticamente
-provare a indovinare per tutto. Comunque la cosa che interpreto io è: "ti da 1 se la causa
-è la linea di interrupt int_no"... però boh, ora mi vengono i dubbi sul se ho usato bene le 
+provare a indovinare per tutto). Comunque la cosa che interpreto io è: "ti da 1 se la causa
+è la linea di interrupt int_no"... però boh, ora mi vengono i dubbi sul se ho usato bene le
 altr cause... poco chiaro, poco chiaro.
 
-Ora vedo perché vogliamo distinguere il time-slice dallo pseudo clock: l'interrupt di uno 
+Ora vedo perché vogliamo distinguere il time-slice dallo pseudo clock: l'interrupt di uno
 e dell'altro fanno cose diverse.
 Infatti questo è il momento giusto di "svegliare tutti i processi" come dicevano le specifiche
-	("Each process waiting on this semapgore is unlocked every 100 milliseconds 
+	("Each process waiting on this semapgore is unlocked every 100 milliseconds
 	automatically by the nucleus").
 Vado a modificare lo scheduler appropriatamente
 
@@ -767,7 +767,7 @@ il tempo sentiti libera di portare le cose com'erano prima se quello che ho fatt
 Io praticamente voglio copiare quando posso, ma ora mi è sorto un dubbio: posso avere più di
 un processo bloccato contemporaneamnte nello pseudoClock? Perché i tipi usano il while,
 ma non penso che più di un porcesso possa essere bloccato sullo pseudoclock.
-Nel caso ci possano essere più di uno di processi bloccati,(perché effettivamente abbiamo 
+Nel caso ci possano essere più di uno di processi bloccati,(perché effettivamente abbiamo
 una waitClock che ti blocca sullo pseudoClock), come facciamo? La nostra semaphorOperation
 sblocca i processi solo quando il semaforo diventa >0. Se togliamo il controllo che dopo il
 cambio il semaforo debba essere >0 funziona. Infatti se libero 1 e il semafore è < 0 ma la
@@ -777,14 +777,14 @@ La cosa è data anche da questa frase :
 	"Each process waiting on this semapgore is unlocked
 	every 100 milliseconds automatically by the nucleus."
 Quell'each vuol dire "ognuno dei processi che sono bloccati ORA vanno sbloccati tutti insieme
-allo scadere dei 100 millisecondi" oppure vuol dire "ogni volta che un processo si blocca su 
-questo semaforo esso verrà sbloccato allo scadere dei 100 millisecondi"? 
+allo scadere dei 100 millisecondi" oppure vuol dire "ogni volta che un processo si blocca su
+questo semaforo esso verrà sbloccato allo scadere dei 100 millisecondi"?
 Sara, rifeltti su questa cosa e dimmi a che conclusione arrivi, forse va visto come lo usa
 nel test per capire se è possibile avere più di un processo.
 Ho appena trovato questa frase:
 	"A SYS3 operation on the pseudo clock should unlock all the waiting processes."
-Che mi sembra implichi che possa esserci più di un processo. [Altro piccolo dubbio, con 
-"waiting processes" intende quelli che aspettano solo lo pseudoClock o anche tutti gli 
+Che mi sembra implichi che possa esserci più di un processo. [Altro piccolo dubbio, con
+"waiting processes" intende quelli che aspettano solo lo pseudoClock o anche tutti gli
 altri processi che aspettano? Penso solo quelli dello pseudoClock, però chiedere conferma
 non fa male]
 Conclusione: secondo me ci possono essere più processi nello pseudoClock, quindi lascio il
@@ -796,20 +796,20 @@ Anche secondo me ci può essere più di un processo che aspetta perchè
 teoricamente lo pseudoClock serve anche (o solo?) per mantere l'allineamento dei processi
 nel tempo. Quindi allo scadere dei 100 millisecondi li sblocchiamo tutti.
 ("A sys3 operation on the pseudo clock should unlock all the waiting processes")
-Mi viene un dubbio, togliere quel controllo cambia il comportamento della sys3 anche 
+Mi viene un dubbio, togliere quel controllo cambia il comportamento della sys3 anche
 quando la chiamiamo per gli altri semafori... Non è che ci incasina tutto toglierlo?
 Solo che al momento non mi viene in mente altro modo di sbloccarli tutti.
 ---------------------------------------
 
-Non capisco molto cosa fa per i device di i/o.... dovremmo vedere se c'è stata la sys10 e 
+Non capisco molto cosa fa per i device di i/o.... dovremmo vedere se c'è stata la sys10 e
 ovviamente, come il resto delle cose, le specifiche sono ambigue. Ho deciso di interpretarlo
-così: se il semaforo associato all'interrupt è negativo allora sblocco il processo bloccato 
-(anche qui c'è sempre il fatto che se è possibile che più di un processo è bloccato sullo 
+così: se il semaforo associato all'interrupt è negativo allora sblocco il processo bloccato
+(anche qui c'è sempre il fatto che se è possibile che più di un processo è bloccato sullo
 stesso sempaforo dobbiamo togliere quel controllo)
-Uso la macro   CDEV_BITMAP_ADDR(line)  per vedere esattamente su quele device sono fermo, 
+Uso la macro   CDEV_BITMAP_ADDR(line)  per vedere esattamente su quele device sono fermo,
 ma non sono sicura di averlo fatto bene.
-Dice poi che dobbiamo mettere lo stato del registro di i/o nell'a1 del processo appena 
-sbloccato. Come recupero il processo bloccato? 
+Dice poi che dobbiamo mettere lo stato del registro di i/o nell'a1 del processo appena
+sbloccato. Come recupero il processo bloccato?
 2 casi:
 	-sblocco con la semaphoreOperation e modifichiamo quest'ultima in modo che ritorni
 	un puntatore al processo bloccato
@@ -824,9 +824,9 @@ Mi è venuto un dubbio: per il registro dei device dovrei fare una variabile pun
 la variabile? Per ora la faccio solo variabile, sono troppo stanca per pensare altro, Sara se
 ce la fai vedi tu se si dovrebbe fare l'uno o l'altro.
 
-Scusa Sara, ora sono troppo stanca, ti lascio a questo. 
-NOTA: ho fatto una funzione a parte per i device perché i device (che non sono terminali) 
-fanno tutti la stessa cosa quindi poi nell'interrupt handler andrà righiamata questa
+Scusa Sara, ora sono troppo stanca, ti lascio a questo.
+NOTA: ho fatto una funzione a parte per i device perché i device (che non sono terminali)
+fanno tutti la stessa cosa quindi poi nell'interrupt handler andrà richiamata questa
 funzione per ogni device.
 
 Cose che ci sono ancora da capire che non ho capito: che fa l'interrupt handler quando non
@@ -845,7 +845,7 @@ La maggior parte dei tuoi dubbi secondo me deriva dal fatto che non si capisce b
 come dovremmo usare questa sys10.
 La mia idea è che l'utente chiama la sys10 dicendo cosa vuole fare e su che terminale.
 La sys10 vede che device è, imposta il suo registro e chiama l'Interrupt Handler
-L'interrupt handler 
+L'interrupt handler
 - manda un ACK a chi l'ha chiamato (vedi primo pallino elenco pag 10 phase2)
 - fa una sys3 sul semaforo corrispondente al device. Magari nella sys3 possiamo mettere
   un controllo in modo che:
@@ -853,9 +853,9 @@ L'interrupt handler
 	sblocchi tutti i processi fermi su quel semaforo e li metti nella readyQueue
   altrimenti
   	fai la sys3 come scritta fin'ora
-  
+
   che ne pensi?
-  
+
 La tua funzione intDev se ci pensi fa quello che fa anche la sys10, quindi secondo me
 non è necesaria però mi piacciono queste operazioni per salvare lo status:
 	unblck_proc = headBlocked(sem);
@@ -863,9 +863,9 @@ non è necesaria però mi piacciono queste operazioni per salvare lo status:
 	unblck_proc->a1=devReg.status; //il primo è un puntatore, il secondo una struct quindi -> . dovrebbero andare bene
 quindi secondo me andrebbero fatte alla ricezione di un interrupt da una linea di device.
 
-Non mi torna in che modo l'interrupt handler possa avere più interrupt pendenti, 
+Non mi torna in che modo l'interrupt handler possa avere più interrupt pendenti,
 comunque ora sono le 10.40 e stamattina volevo anche fare un esame, io propongo di sentirci
-appena puoi per fare un po' il punto della situazione e chiarirci i dubbi sul tempo e sugli 
+appena puoi per fare un po' il punto della situazione e chiarirci i dubbi sul tempo e sugli
 interrupt e la loro gestione che sono un po' i nostri punti critici.
 Un'altra cosa che dobbiamo fare assolutamente è cambiare il nome alla dir!
 
@@ -883,6 +883,12 @@ Quindi è per questo che gli altri facevano -4!!
 
 exceptions.c
 Trovato possibile errore nella onDev, semAddr non è definito, si intendeva p->p_cursem?
+--------------------------------------------
+      hai ragione, però p_cursem punta all'intera struttura del semaforo
+       o al campo s_semAdd? Ho supposto puntasse alla struttura quidni ho messo
+       pcb->p_cursem.s_semAdd, come al solito non sono sicura sul mio utilizzo
+       dei puntatori
+-----------------------------------------------
 
 interrupt.c
 Ho visto che quando sbloccavi i processi nello pseudoclock facevi una sys3 con valore 1.
@@ -890,10 +896,10 @@ Ragionando ho pensato in questo modo:
 La waitForClock mette in coda i processi nel semaforo dello pseudoClock e decrementa il sem
 di 1. Ciò significa che se abbiamo 10 proc che hanno chiamato la sys9, il semaforo pseudoClock
 vale -10. Chiamando solo una volta la sys3 con valore 1 ne sblocca solo 1 di processo.
-Ho scelto di modificare la sys3 in modo che quando viene chiamata con peso positivo sullo 
+Ho scelto di modificare la sys3 in modo che quando viene chiamata con peso positivo sullo
 pseudoClock sblocca tutti i processi fermi su quel semaforo e mette il semaforo a 0.
 
-Non avevo notato che tu avevi fatto un ciclo nell'interrupt handler che chiamava tante sys3 
+Non avevo notato che tu avevi fatto un ciclo nell'interrupt handler che chiamava tante sys3
 quanti erano i processi bloccati (guardia del ciclo pseudoclock < 0). Devo leggere più con calma il codice -.-
 Comunque preferisco lasciare il controllo e il ciclo nella sys3 perchè nelle specifiche dice
 "A sys3 operation on the pseudoclock should unblock all the waiting processes".
@@ -906,5 +912,29 @@ Comunque ho trovato degli appunti presi durante le lezioni, in particolare mi pr
 A richiede 3 risorse, il sem ne ha solo 2, non gliele do e aspetta.
 B richiede 1 risorsa, il sem ce l' ha ma NON gliela do perchè c'è A che aspetta!"
 
-I nostri semafori funzionano così? 
+I nostri semafori funzionano così?
 Appena hai finito di leggere scrivi che così guardiamo insieme le cose che ti dicevo ieri
+
+
+-----Olga---------
+
+Tra poco ti scrivo ma per ora rispondo alle cose già qui.
+
+Per quanto riguarda il tempo, questo non si aggiorna automaticametne ma funziona ad
+intervalli, infatti appena un processo è scelto come il processo da eseguire
+faccio partire il conteggio del suo userTime (parlo solo di userTime, ma vale
+più o meno uguale anche per il global/cpu time) salvando quel momento come
+userTimeStart. Appena non sono più in userTime, quindi ad esempio all'inizio
+della gestione di sistemcall, prendo quel tempo (chiamo time_end) come tempo  di fine dello
+userTime e quindi salvo nel campo per il tempo del processo lo time_end - userTimeStart
+
+Ho rimesso il timer come era prima perché ho avuto una (forse) rivelazione:
+nei casi in cui il currentProcess è NULL, ci capita che ci fermiamo li avvolte,
+però noi vogliamo che comunque, sempre, ogni 100 millisecondi scatti l'intervalTimer
+e per questo va settato prima di fare i controlli, se lo mettiamo dopo ci sarabbe
+troppo ritardo. (per capire di cosa parlo vedi pure la risposta del prof alla mailinglist)
+Questo però è una cosa su cui bisogna pensare di più
+
+Per quanto riguarda il "si può avere interrupt senza fare prima la sys10?", secondo
+me si, un po' perché nelle specifiche dice "If the SYS10 for this interrupt was requested"
+quindi penso che c'è la possibilità che non ci sia stata una sys10 prima.

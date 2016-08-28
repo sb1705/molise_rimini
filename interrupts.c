@@ -42,8 +42,10 @@ void interruptHandler(){
 				currentProcess=NULL;
 			}
 		}else if (current_timer=PSEUDO_CLOCK){
+			while (&pseudoClock < 0){
 				semaphoreOperation (&pseudoClock, 1); //per liberare le cose devo fare 1 vero?
-				
+			}
+
 		}
 	}
 

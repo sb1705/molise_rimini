@@ -37,13 +37,13 @@ int onDev (pcb_t *pcb){
 	if (onSem(pcb)){
 		for (i=0; i<=DEV_USED_INTS; i++){
 			for (j=0; j<DEV_PER_INT;j++){
-				if (semAdd==&devices[i][j]){ //semAdd non è definito qui!! forse si intendeva pcb->p_cursem
+				if (pcb->p_cursem.s_semAdd==&devices[i][j]){ //semAdd non è definito qui!! forse si intendeva pcb->p_cursem
 					return TRUE;
 				}
 			}
 		}
 
-		if (semAdd==&pseudoClock) //non so se lo pseudoClock è considerato device
+		if (pcb->p_cursem.s_semAdd==&pseudoClock) //non so se lo pseudoClock è considerato device
 			return TRUE;
 		//qui ci arriviamo se sono collegato a un semaforo ma non è device
 		return FALSE;
@@ -126,7 +126,7 @@ void sysBpHandler(){
 
 
 				case EXITTRAP:
-					exitTrap((unsigned int) excptype, (unsigned int) retval)
+					exitTrap((unsigned int) excptype, (unsigned int) retval);
 					break;
 
 				case GETCPUTIME:
@@ -339,19 +339,8 @@ void semaphoreOperation (int *semaddr, int weight){
 
 		(*semaddr) += weight;
 		if(weight > 0){ //abbiamo liberato risorse
-			if(semaddr == pseudoClock){ //pseudoClock tick avvenuto: sblocchiamo tutti i proc waiting for clock
-				pcb_t *p;
-				p=removeBlocked(semaddr);
-				while(p!=NULL){
-					// bisogna modificare i campi del tempo del processo?
-					p->p_resource=0;
-					insertProcQ(&readyQueue, p);
-					p = removeBlocked(semaddr);
-				}
-				 //after each pseudoclock-tick the semaphore's value should always be 0
-				*semaddr=0; //Questo assegnamento potrebbe generare errori se non togliessimo else if(*semaddr >= 0)
-			}
-			else if(*semaddr >= 0){ //26/08: questo è il controllo che forse dovremmo togliere; 28/08: cambiato if in else if
+
+		//	else if(*semaddr >= 0){ //26/08: questo è il controllo che forse dovremmo togliere; 28/08: cambiato if in else if ; abbiamo deciso di toglierlo, vedere il diaro per le motivazioni (26/08)
 
 				// Se sem > risorse richieste dal primo bloccato --> sblocco processo
 				pcb_t *p;
@@ -368,7 +357,7 @@ void semaphoreOperation (int *semaddr, int weight){
 						}
 					}
 				}
-			}
+			//}
 		}
 		else{ // weight <0, abbiamo allocato risorse
 			//When  resources  are  allocated,  if  the  value  of  the  semaphore  was  or
