@@ -37,13 +37,13 @@ int onDev (pcb_t *pcb){
 	if (onSem(pcb)){
 		for (i=0; i<=DEV_USED_INTS; i++){
 			for (j=0; j<DEV_PER_INT;j++){
-				if (pcb->p_cursem.s_semAdd==&devices[i][j]){ //semAdd non è definito qui!! forse si intendeva pcb->p_cursem
+				if (pcb->p_cursem->s_semAdd==&devices[i][j]){ //semAdd non è definito qui!! forse si intendeva pcb->p_cursem
 					return TRUE;
 				}
 			}
 		}
 
-		if (pcb->p_cursem.s_semAdd==&pseudoClock) //non so se lo pseudoClock è considerato device
+		if (pcb->p_cursem->s_semAdd==&pseudoClock) //non so se lo pseudoClock è considerato device
 			return TRUE;
 		//qui ci arriviamo se sono collegato a un semaforo ma non è device
 		return FALSE;
@@ -513,85 +513,18 @@ void ioDevOp(unsigned int command, int intlNo, unsigned int dnum){
 		}
 	}
 
-	if (intlNo == IL_TERMINAL){//gestione interrupt terminale
-
-		// puntatori ai campi della struttura
-		unsigned int *recvStatus, *recvCommand, *transmStatus, *transmCommand; //i vari campi dei device register sono grandi 4, suppongo che anche l'int sia grande 4, al massimo cambiamo
-
-		termReg=DEV_REG_ADDR(intlNo, dnum);
-
-		recvStatus = termReg;
-		recvCommand = termReg + 0x4;
-		transmStatus = termReg + 0x8;
-		transmCommand = termReg + 0xC;
-
-		//A terminal operation is started by loading the appropriate value(s) into the
-		//TRANSM COMMAND or RECV COMMAND field.
-		*command=command;//non so se si può fare
-		if(is_read){//dobbiamo leggere/ricevere
-			*recvCommand==2; //dico che deve trasmettere/ricevere
-			/*A character is received, and placed in RECV STATUS.RECVD-CHAR only after
-			a RECEIVECHAR command has been issued to the receiver.*/
-			RECEIVECHAR(); //non so dove sia.
-			if(*recvStatus==5){
-				/* ricezione andata a buon fine */
-
-				/*Upon completion of the operation an
-interrupt is raised and an appropriate status code is set in TRANSM STATUS or
-RECV STATUS respectively;*/
-
-				/* Solleviamo un interrupt e poi l'interrupt handler vedrà che
-				siamo noi e ci manda un ACK*/
-			}
-		}
-		else{//dobbiamo scrivere/trasmettere
-			*transmCommand==2; //dico che deve trasmettere/ricevere
-
-			/* Fare qualcosa per trasmettere */
-
-			if(*transmStatus==5){
-				/* scrittura andata a buon fine */
-			}
-		}
-	}
-	else{ // gestione interrupt altri device
-
-		//puntatori ai campi della struttura.
-		unsigned int *status, *command, *data0, *data1; //i vari campi dei device register sono grandi 4, suppongo che anche l'int sia grande 4, al massimo cambiamo
-
-		devReg=DEV_REG_ADDR(intlNo, dnum);
-		status = devReg;
-		command = devReg + 0x4;
-		data0 = devReg + 0x8;
-		data1 = devReg + 0xC;
-
-
-		if(status == 1){//il device è ready
-
-		}
-	}
-
-	/* -------------- Cose di Olga: -----------------------
-	//controllo se è lettura o scrittura del terminale
-	if ( dnum & 0x10000000 ) { // vero sse il bit più significativo era acceso
-		dev = N_EXT_IL+1;
-		dnum = dnum & 0x10000111;
-		is_read = TRUE;
-	}else{
-		dev = intlNo - DEV_IL_START; //in arch.h: DEV_IL_START (N_INTERRUPT_LINES - N_EXT_IL) --> 8-5 = 3
-		is_read = FALSE;
-	}
 
 	if (intlNo == IL_TERMINAL){//azioni su terminali
 		termReg=DEV_REG_ADDR(intlNo, dnum);
 		if (is_read){
-			//se leggo il comando va messo in quello che riceve o in quello che legge????
 			termReg->recv_command=command;
-		}else{
+		}
+		else{
 			termReg->transm_status=command;
 		}
 
-	}else{//azioni su altri device
+	}
+	else{//azioni su altri device
 		devReg=DEV_REG_ADDR(intlNo, dnum);
 		devReg->command=command;
 	}
@@ -600,7 +533,7 @@ RECV STATUS respectively;*/
 
 	//la cosa seguente in teoria dovrebbe bloccare il currentProcess nel semaforo del device giusto ma boh
 	semaphoreOperation(&devices[dev][dnum], -1);
-	*/
+
 }
 
 

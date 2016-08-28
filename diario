@@ -889,6 +889,13 @@ Trovato possibile errore nella onDev, semAddr non è definito, si intendeva p->p
        pcb->p_cursem.s_semAdd, come al solito non sono sicura sul mio utilizzo
        dei puntatori
 -----------------------------------------------
+--------------------------------------------
+    Sostituito pcb->p_cursem.s_semAdd con pcb->p_cursem->s_semAdd dato
+    che il campo p_cursem è di tipo puntatore a struttura.
+    Nel cercare questa cosa ho visto che la definizione di struct semd_t
+    sta in asl.c ma non dovrebbe essere in asl.h o in types? come fa a funzionare
+    se la usiamo anche da altre parti senza includere asl.c?
+--------------------------------------------
 
 interrupt.c
 Ho visto che quando sbloccavi i processi nello pseudoclock facevi una sys3 con valore 1.
@@ -945,7 +952,7 @@ OK, abbiamo risolto (forse) i dubbi sulla sys3. Si torna a parlare di interrupts
 INTERRUPTS
 
 Ho avuto ancora un dubbio su come gestire il CPUTimer (sta il commento nel codice),
-[copio anche qui il commento perché è molto lungo ed è una cosa dove secondo me 
+[copio anche qui il commento perché è molto lungo ed è una cosa dove secondo me
 bisogna tornare
 
 //qui gli altri aggiornavano anche il tempo di cpu, ma io no capisco perché bisognerebbe
@@ -958,22 +965,22 @@ bisogna tornare
  il cambio del CPUTime va fatto qui e non all'inizio, altrimenti va bene lasciarlo così com'è
 ]
 
-Ho trovato due modi (costanti) diverse per riferirsi agli interrupt, una sta in uARMconst e 
-l'altra sta in arch. Quale dobbiamo usare? Per ora ho usato quella di arch, vediamo se 
+Ho trovato due modi (costanti) diverse per riferirsi agli interrupt, una sta in uARMconst e
+l'altra sta in arch. Quale dobbiamo usare? Per ora ho usato quella di arch, vediamo se
 servirebbe l'altra.
 
-Leggendo le specifiche mi è più chiaro cosa fare: per prima cosa passo l'acknowledgement 
+Leggendo le specifiche mi è più chiaro cosa fare: per prima cosa passo l'acknowledgement
 (come dice il primo punto) poi se il semaforo ha valore <1 faccio l'oerazione sul semaforo
 (secondo punto), poi il terzo punto dice di storare lo status ward del device in a1 se era
-stata fatta la sys10. Se la sys10 era stata fatta, vuol dire che c'era un processo 
-bloccato nel semaforo e quindi c'è un processo nella coda dei processi bloccati quindi io 
+stata fatta la sys10. Se la sys10 era stata fatta, vuol dire che c'era un processo
+bloccato nel semaforo e quindi c'è un processo nella coda dei processi bloccati quindi io
 prendo la testa della coda dei bloccati (e la puntiamo con un p), sblocco il processo,se
 ora p!=NULL allora vuol dire che c'era un processo bloccato che è stato sbloccato e quel
-processo è prorpio p. Ora, dovremmo fare ulterioi controlli su p per vedere se viene 
+processo è prorpio p. Ora, dovremmo fare ulterioi controlli su p per vedere se viene
 effettivamente sbloccato o lascio così?
 C'è sempre il dubbio di che fare se il semaforo non è <0
 
-Per vedere quali sono gli interrupt che pendondo ho una bitmap che ti dice su quali 
+Per vedere quali sono gli interrupt che pendondo ho una bitmap che ti dice su quali
 device ci sono interrupt pendenti [CDEV_BITMAP_ADDR], quindi visto che posso interrupt dello
 stesso tipo che pendono su più device devo decidere quale interrupt (di quale device) devo
 gestire (la bit map è spiegata nel manuale a pag 20 sezione 3.1.6).
@@ -1006,22 +1013,26 @@ Finito il ciclo for quindi la i diventa 1. Nel prossimo ciclo l'& sarà:
 -----------
 00000001
 
-Quindi passo nell'if e metto devn=1 e mi fermo ritornando 1: infatti dalla bitmap originale 
+Quindi passo nell'if e metto devn=1 e mi fermo ritornando 1: infatti dalla bitmap originale
 avevamo un intterupt pendente nel device 1.
 
 Una domanda: la bitmap si aggiorna da sola vero?
 
+--------------------------
+secondo me sì, tanto è una cosa che ha a che fare con l'architettura
+e non col SO, quindi non dobbiamo farla noi (spero)
+-------------------------
 
 Pensavo a come implementare la priorita... e pensavo che dipende da come funzionano gli
 interrupt. Voglio dire, noi usiamo getCAUSE() per vedere su quale linea c'è l'interrupt,
 ma che succede se ho interrupt su più linee? Ok nella mia testa funziona che la causa
-è tipo un byte dove sono accesi i bit in modo che l'i-esimo bit sia acceso quando 
+è tipo un byte dove sono accesi i bit in modo che l'i-esimo bit sia acceso quando
 sull'i-esima linea c'è un interrupt. Poi facendo CAUSE_IP_GET con come secondo parametro
 la linea dell'interrupt, ti ritorna vero se nella causa, tra le linee per cui il bit
-è acceso, ci sta quella che gli hai passato come parametro. In questo modo strutturando 
+è acceso, ci sta quella che gli hai passato come parametro. In questo modo strutturando
 tutti gli if nel modo in cui sono messi allora le priorità vengono seguite in modo esatto.
 
-[ripeto che rimane il dubbio di che fare se il semaforo è positivo, magari a qualcuno il 
+[ripeto che rimane il dubbio di che fare se il semaforo è positivo, magari a qualcuno il
 dubbio è venuto e lo ha chiesto nella mailing list]
 
 
@@ -1029,14 +1040,14 @@ INTERRUPT TERMINALE
 
 Provo a fare il gestore per l'interrupt del terminale
 
-OK, che io voglia leggere o scrivere uso sempre la linea 7 e la bitmap per i device del 
+OK, che io voglia leggere o scrivere uso sempre la linea 7 e la bitmap per i device del
 terminale è la stessa sia che io voglia leggere sia che io voglia scrivere quidni la prima
-parte della gestione è uguale. Ora per distinguere se quella particolare operazione sia di 
-lettura o scrittura devo andare a leggere il registro del device: 
+parte della gestione è uguale. Ora per distinguere se quella particolare operazione sia di
+lettura o scrittura devo andare a leggere il registro del device:
 	Controlliamo prima la parte della trasmissione perché la trasmissione ha la precedenza.
-	Se lo status ci dice che ha trasmesso un carattere, noi possiamo riconoscere 
+	Se lo status ci dice che ha trasmesso un carattere, noi possiamo riconoscere
 	l'interrupt e fare le operaioni sul semaforo
-	
+
 	Altrimenti andiamo a controllare lo stato del ricevente, se lo stato del registro
 	dice che ho ricevuto un carattere allora riconosco di conseguena
 
@@ -1045,4 +1056,15 @@ solo se sia lo statuts del reciver che del trasmittente sono a device ready allo
 spegne il bit della bitmap (ancora: la bitmap se la gestisce da solo o devo gestirla io?)
 
 Ho fatto una funione a parte per la gestione dell'interrupt timer perché così è più
-carino da vedere, si poteva fare anche lì ma mi piace di più così u.u    
+carino da vedere, si poteva fare anche lì ma mi piace di più così u.u
+
+-------------------------
+Ho aggiunto il caso di errore nella device_numb, se nessuno degli 8 bit era =1 -> PANIC.
+Ho messo anche commenti alla funzione nella speranza di non dover tornare ogni volta
+nel diario per ricordarmi che fa xD
+Nella intDev ho messo devReg di tipo puntatore a struct (prima era solo struct) perchè
+credo che la DEV_REG_ADDR ci restituisca un indirizzo.
+Lo stesso per termReg in intTerm.
+Ok, ho finito di leggere interrupt.c
+Domani manca solo da riflettere sul commento sul tempo dentro intTimer()
+Ora sono stanca e rischio solo di far casini.

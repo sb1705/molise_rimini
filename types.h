@@ -9,7 +9,12 @@ typedef unsigned int size_t;
 typedef unsigned int pid_t;
 typedef unsigned int cputime_t;
 
-struct semd_t;
+struct semd_t{
+
+    int *s_semAdd;
+    struct clist s_link;
+    struct clist s_procq;
+};
 
 /* process control block type */
 typedef struct pcb_t {
