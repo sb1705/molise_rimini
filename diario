@@ -939,4 +939,4 @@ Per quanto riguarda il "si può avere interrupt senza fare prima la sys10?", sec
 me si, un po' perché nelle specifiche dice "If the SYS10 for this interrupt was requested"
 quindi penso che c'è la possibilità che non ci sia stata una sys10 prima.
 
-Riga di prova
+
