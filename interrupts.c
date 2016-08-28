@@ -85,12 +85,13 @@ void intDev(int int_no){ //gestore dell'interruptdi device, ho come argomento la
 	sem=&devices[int_no-DEVINTBASE][devnumb];
 	devReg=DEV_REG_ADDR(int_no, devnumb);
 	//da qui in poi Sara fai attenzione a come uso i puntatori che come al solito non sono sicura
-	devReg->command = DEV_C_ACK;	//passo l'acknowledgement
+	devReg->command = DEV_C_ACK;	//passo l'acknowledgement (DEV_C_ACK sta in uARMconst)
 
-	if (*sem < 0){
+	if (*sem < 1){
 		unblck_proc = headBlocked(sem);
-		semaphoreOperation(sem,1); //device starting interrupt line DEVINTBASE = 3 --> const.h
+			semaphoreOperation(sem,1); //device starting interrupt line DEVINTBASE = 3 --> const.h
 		if (unblck_proc!=NULL){
+
 			unblck_proc->a1=devReg.status; //il primo è un puntatore, il secondo una struct quindi -> . dovrebbero andare bene
 		}
 	}
@@ -114,7 +115,7 @@ void intTerm(int int_no){
 
 		sem=&devices[int_no-DEVINTBASE][devnumb];//se è trasmissione allora il semaforo è quello di trasmissione
 		termReg->transm_command=DEV_C_ACK;//riconosco l'interrupt
-		if (*sem < 0){
+		if (*sem < 1){
 			unblck_proc = headBlocked(sem);
 			semaphoreOperation(sem,1); //device starting interrupt line DEVINTBASE = 3 --> const.h
 			if (unblck_proc!=NULL){
@@ -126,7 +127,7 @@ void intTerm(int int_no){
 		sem=&devices[int_no-DEVINTBASE+1][devnumb];//se è di ricevere allora il semaforo è l'ultimo
 		termReg->recv_command=DEV_C_ACK;
 
-		if (*sem < 0){
+		if (*sem < 1){
 			unblck_proc = headBlocked(sem);
 			semaphoreOperation(sem,1); //device starting interrupt line DEVINTBASE = 3 --> const.h
 			if (unblck_proc!=NULL){
