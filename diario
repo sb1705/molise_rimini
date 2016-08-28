@@ -897,3 +897,14 @@ Non avevo notato che tu avevi fatto un ciclo nell'interrupt handler che chiamava
 quanti erano i processi bloccati (guardia del ciclo pseudoclock < 0). Devo leggere più con calma il codice -.-
 Comunque preferisco lasciare il controllo e il ciclo nella sys3 perchè nelle specifiche dice
 "A sys3 operation on the pseudoclock should unblock all the waiting processes".
+
+Sono le 10.50 e come ieri devo fare esami, volevo mandare una mail (ne avevamo parlato giorni
+fa) ma ho cercato sul quaderno per vedere cosa dovevo chiedere e avevo scritto solo "Mandare mail"
+Tu ti ricordi cosa dovevamo chiedere?
+Comunque ho trovato degli appunti presi durante le lezioni, in particolare mi preoccupa questo:
+"Attenzione a mantenere i semafori FIFO. Esempio
+A richiede 3 risorse, il sem ne ha solo 2, non gliele do e aspetta.
+B richiede 1 risorsa, il sem ce l' ha ma NON gliela do perchè c'è A che aspetta!"
+
+I nostri semafori funzionano così? 
+Appena hai finito di leggere scrivi che così guardiamo insieme le cose che ti dicevo ieri
