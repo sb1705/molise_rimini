@@ -892,3 +892,8 @@ di 1. Ciò significa che se abbiamo 10 proc che hanno chiamato la sys9, il semaf
 vale -10. Chiamando solo una volta la sys3 con valore 1 ne sblocca solo 1 di processo.
 Ho scelto di modificare la sys3 in modo che quando viene chiamata con peso positivo sullo 
 pseudoClock sblocca tutti i processi fermi su quel semaforo e mette il semaforo a 0.
+
+Non avevo notato che tu avevi fatto un ciclo nell'interrupt handler che chiamava tante sys3 
+quanti erano i processi bloccati (guardia del ciclo pseudoclock < 0). Devo leggere più con calma il codice -.-
+Comunque preferisco lasciare il controllo e il ciclo nella sys3 perchè nelle specifiche dice
+"A sys3 operation on the pseudoclock should unblock all the waiting processes".
