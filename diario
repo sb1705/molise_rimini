@@ -938,5 +938,111 @@ Questo però è una cosa su cui bisogna pensare di più
 Per quanto riguarda il "si può avere interrupt senza fare prima la sys10?", secondo
 me si, un po' perché nelle specifiche dice "If the SYS10 for this interrupt was requested"
 quindi penso che c'è la possibilità che non ci sia stata una sys10 prima.
-asdfffff
 
+
+OK, abbiamo risolto (forse) i dubbi sulla sys3. Si torna a parlare di interrupts -.-''
+
+INTERRUPTS
+
+Ho avuto ancora un dubbio su come gestire il CPUTimer (sta il commento nel codice),
+[copio anche qui il commento perché è molto lungo ed è una cosa dove secondo me 
+bisogna tornare
+
+//qui gli altri aggiornavano anche il tempo di cpu, ma io no capisco perché bisognerebbe
+ farlo visto che lo abbiamo già fatto sopra, secondo te?
+//logicamente avrebbe senso aggiornarlo qui, ma il dubbio è (che forse va cercato nel
+ libro perché è abbastanza teoria): quando sto gestendo un interrupt il processo che è
+ ufficialmente nella cpu è il processo che era già sulla cpu o l'interrupt handler?
+ Secondo me è l'interrupt handler però è più una mia opinione che una cosa che so.
+ Se facendo ricerche il gestore di interrupt non risulta un processo a sè allora sicuramente
+ il cambio del CPUTime va fatto qui e non all'inizio, altrimenti va bene lasciarlo così com'è
+]
+
+Ho trovato due modi (costanti) diverse per riferirsi agli interrupt, una sta in uARMconst e 
+l'altra sta in arch. Quale dobbiamo usare? Per ora ho usato quella di arch, vediamo se 
+servirebbe l'altra.
+
+Leggendo le specifiche mi è più chiaro cosa fare: per prima cosa passo l'acknowledgement 
+(come dice il primo punto) poi se il semaforo ha valore <1 faccio l'oerazione sul semaforo
+(secondo punto), poi il terzo punto dice di storare lo status ward del device in a1 se era
+stata fatta la sys10. Se la sys10 era stata fatta, vuol dire che c'era un processo 
+bloccato nel semaforo e quindi c'è un processo nella coda dei processi bloccati quindi io 
+prendo la testa della coda dei bloccati (e la puntiamo con un p), sblocco il processo,se
+ora p!=NULL allora vuol dire che c'era un processo bloccato che è stato sbloccato e quel
+processo è prorpio p. Ora, dovremmo fare ulterioi controlli su p per vedere se viene 
+effettivamente sbloccato o lascio così?
+C'è sempre il dubbio di che fare se il semaforo non è <0
+
+Per vedere quali sono gli interrupt che pendondo ho una bitmap che ti dice su quali 
+device ci sono interrupt pendenti [CDEV_BITMAP_ADDR], quindi visto che posso interrupt dello
+stesso tipo che pendono su più device devo decidere quale interrupt (di quale device) devo
+gestire (la bit map è spiegata nel manuale a pag 20 sezione 3.1.6).
+Si deve giocare con le operazioni bit a bit. Ho fatto la funzione device_numb
+dove c'è un ciclo for. L'indice del for ci servirà per salveare il numero del device.
+Per capire come funziona faccio un esempio
+
+{NOTA la bitmap si conta da destra a sinistra, diciamo quindi
+che gli indici srabbero 7|6|5|4|3|2|1|0}
+
+Mettiamo che la bitmap è
+
+00100010
+
+La prima cosa che facciamo  è l'& con 1 quindi:
+
+00000001 &
+00100010
+----------
+00000000
+
+è falso quindi faccio uno shift verso destra di un passo
+
+00010001
+
+Finito il ciclo for quindi la i diventa 1. Nel prossimo ciclo l'& sarà:
+
+00000001 &
+00010001
+-----------
+00000001
+
+Quindi passo nell'if e metto devn=1 e mi fermo ritornando 1: infatti dalla bitmap originale 
+avevamo un intterupt pendente nel device 1.
+
+Una domanda: la bitmap si aggiorna da sola vero?
+
+
+Pensavo a come implementare la priorita... e pensavo che dipende da come funzionano gli
+interrupt. Voglio dire, noi usiamo getCAUSE() per vedere su quale linea c'è l'interrupt,
+ma che succede se ho interrupt su più linee? Ok nella mia testa funziona che la causa
+è tipo un byte dove sono accesi i bit in modo che l'i-esimo bit sia acceso quando 
+sull'i-esima linea c'è un interrupt. Poi facendo CAUSE_IP_GET con come secondo parametro
+la linea dell'interrupt, ti ritorna vero se nella causa, tra le linee per cui il bit
+è acceso, ci sta quella che gli hai passato come parametro. In questo modo strutturando 
+tutti gli if nel modo in cui sono messi allora le priorità vengono seguite in modo esatto.
+
+[ripeto che rimane il dubbio di che fare se il semaforo è positivo, magari a qualcuno il 
+dubbio è venuto e lo ha chiesto nella mailing list]
+
+
+INTERRUPT TERMINALE
+
+Provo a fare il gestore per l'interrupt del terminale
+
+OK, che io voglia leggere o scrivere uso sempre la linea 7 e la bitmap per i device del 
+terminale è la stessa sia che io voglia leggere sia che io voglia scrivere quidni la prima
+parte della gestione è uguale. Ora per distinguere se quella particolare operazione sia di 
+lettura o scrittura devo andare a leggere il registro del device: 
+	Controlliamo prima la parte della trasmissione perché la trasmissione ha la precedenza.
+	Se lo status ci dice che ha trasmesso un carattere, noi possiamo riconoscere 
+	l'interrupt e fare le operaioni sul semaforo
+	
+	Altrimenti andiamo a controllare lo stato del ricevente, se lo stato del registro
+	dice che ho ricevuto un carattere allora riconosco di conseguena
+
+In teoria, facendo il comando di ack dovrebbe settare bene il Device ready in modo che
+solo se sia lo statuts del reciver che del trasmittente sono a device ready allora si
+spegne il bit della bitmap (ancora: la bitmap se la gestisce da solo o devo gestirla io?)
+
+Ho fatto una funione a parte per la gestione dell'interrupt timer perché così è più
+carino da vedere, si poteva fare anche lì ma mi piace di più così u.u    

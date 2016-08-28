@@ -599,7 +599,7 @@ RECV STATUS respectively;*/
 	//basta quello che ho fatto sopra per "performare" il comando?
 
 	//la cosa seguente in teoria dovrebbe bloccare il currentProcess nel semaforo del device giusto ma boh
-	semaphoreOperation(&devices[dev][dnum]; -1);
+	semaphoreOperation(&devices[dev][dnum], -1);
 	*/
 }
 
