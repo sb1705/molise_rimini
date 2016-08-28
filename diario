@@ -868,3 +868,15 @@ comunque ora sono le 10.40 e stamattina volevo anche fare un esame, io propongo 
 appena puoi per fare un po' il punto della situazione e chiarirci i dubbi sul tempo e sugli 
 interrupt e la loro gestione che sono un po' i nostri punti critici.
 Un'altra cosa che dobbiamo fare assolutamente è cambiare il nome alla dir!
+
+28/08
+Mi sono letta ancora una volta il manuale ma non ho trovato niente di interessante sul tempo.
+Però proprio in fondo ho trovato:
+8.3 Hints
+When writing Exception Handlers code, it is well advised to pay attention to the Program
+Counter value stored in the Old Area. As described in Exception Handling section, each
+exception leave a different value in Link Return register and this value is automatically
+moved to Old Area.pc from low level exception handlers, so, for example, when handling
+an interrupt, the Old Area.pc has to be decreased by 4 to point to the right return
+instruction.
+Quindi è per questo che gli altri facevano -4!!
