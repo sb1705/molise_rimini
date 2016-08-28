@@ -339,7 +339,19 @@ void semaphoreOperation (int *semaddr, int weight){
 
 		(*semaddr) += weight;
 		if(weight > 0){ //abbiamo liberato risorse
-			if(*semaddr >= 0){ // questo è il controllo che forse dovremmo togliere 26/08
+			if(semaddr == pseudoClock){ //pseudoClock tick avvenuto: sblocchiamo tutti i proc waiting for clock
+				pcb_t *p;
+				p=removeBlocked(semaddr);
+				while(p!=NULL){
+					// bisogna modificare i campi del tempo del processo?
+					p->p_resource=0;
+					insertProcQ(&readyQueue, p);
+					p = removeBlocked(semaddr);
+				}
+				 //after each pseudoclock-tick the semaphore's value should always be 0
+				*semaddr=0; //Questo assegnamento potrebbe generare errori se non togliessimo else if(*semaddr >= 0)
+			}
+			else if(*semaddr >= 0){ //26/08: questo è il controllo che forse dovremmo togliere; 28/08: cambiato if in else if
 
 				// Se sem > risorse richieste dal primo bloccato --> sblocco processo
 				pcb_t *p;
