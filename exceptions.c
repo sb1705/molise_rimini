@@ -37,7 +37,7 @@ int onDev (pcb_t *pcb){
 	if (onSem(pcb)){
 		for (i=0; i<=DEV_USED_INTS; i++){
 			for (j=0; j<DEV_PER_INT;j++){
-				if (semAdd==&devices[i][j]){
+				if (semAdd==&devices[i][j]){ //semAdd non è definito qui!! forse si intendeva pcb->p_cursem
 					return TRUE;
 				}
 			}
