@@ -880,3 +880,6 @@ moved to Old Area.pc from low level exception handlers, so, for example, when ha
 an interrupt, the Old Area.pc has to be decreased by 4 to point to the right return
 instruction.
 Quindi è per questo che gli altri facevano -4!!
+
+exceptions.c
+Trovato possibile errore nella onDev, semAddr non è definito, si intendeva p->p_cursem?
