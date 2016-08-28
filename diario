@@ -883,3 +883,12 @@ Quindi è per questo che gli altri facevano -4!!
 
 exceptions.c
 Trovato possibile errore nella onDev, semAddr non è definito, si intendeva p->p_cursem?
+
+interrupt.c
+Ho visto che quando sbloccavi i processi nello pseudoclock facevi una sys3 con valore 1.
+Ragionando ho pensato in questo modo:
+La waitForClock mette in coda i processi nel semaforo dello pseudoClock e decrementa il sem
+di 1. Ciò significa che se abbiamo 10 proc che hanno chiamato la sys9, il semaforo pseudoClock
+vale -10. Chiamando solo una volta la sys3 con valore 1 ne sblocca solo 1 di processo.
+Ho scelto di modificare la sys3 in modo che quando viene chiamata con peso positivo sullo 
+pseudoClock sblocca tutti i processi fermi su quel semaforo e mette il semaforo a 0.
