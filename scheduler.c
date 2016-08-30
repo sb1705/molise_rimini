@@ -12,8 +12,8 @@
 #include "scheduler.h"
 #include "const.h"
 #include "initial.h"
-#include <libuarm.h>
-#include <uARMconst.h>
+#include </usr/include/uarm/libuarm.h>
+#include </usr/include/uarm/uARMconst.h>
 
 //Variabili globali definite in initial.h, ho letto da una parte come usare i .h con le variabili locali e quidni quest cosa qui non dovrebbe servire
 // extern pcb_t *currentProcess;
@@ -79,7 +79,7 @@ void scheduler(){
 	if (currentProcess==NULL){
 
 		if( !clist_empty(readyQueue) )
-			currentProcess = removeProcQ(readyQueue);
+			currentProcess = removeProcQ(&readyQueue);
 		else{
 			if( processCount == 0 )	//non ci sono più processi e posso terminare
 				HALT();
@@ -96,9 +96,9 @@ void scheduler(){
 		CPUTimeStart = getTODLO();	//se comincia l'esecuzione di un nuovo processo riparte il conteggio del tempo di CPU
 	}
 	userTimeStart = getTODLO();	//riparte il conteggio del tempo utente perché noi entriamo nello scheduler come kernel quindi dobbiamo far ripartire il tempo utente quando usciamo
-	
+
 	//carico nel processore lo stato del processo scelto come prossimo
-	LDST( &current_process->p_s );
+	LDST( &currentProcess->p_s );
 }
 //
 // questo di seguito è per vedere se l'interval timer è sttato dal time slice o dallo pseudo clock, non so se ci servirà o meno in futuro, per ora non vedo ragione di annotarlo

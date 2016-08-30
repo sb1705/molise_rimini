@@ -5,7 +5,7 @@
 #ifndef CONST_H
 #define CONST_H
 
-#include <arch.h>
+#include </usr/include/uarm/arch.h>
 
 #define HIDDEN static
 #define memaddr unsigned int

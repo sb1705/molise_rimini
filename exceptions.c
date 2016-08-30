@@ -1,10 +1,12 @@
-#include "asl.e"
+#include "asl.h"
 #include "pcb.h"
 #include "initial.h"
+#include "scheduler.h"
+#include "exceptions.h"
 
-#include <libuarm.h>
+#include </usr/include/uarm/libuarm.h>
 
-HIDDEN state_t *sysBp_old = (state_t *) SYSBK_OLDAREA; //Cos'è???
+//HIDDEN state_t *sysBp_old = (state_t *) SYSBK_OLDAREA; //Cos'è???
 
 
 // ---- implementa qui le syscall
@@ -58,6 +60,7 @@ int onDev (pcb_t *pcb){
 //il puntatore al primo dei figli di mypcb
 //restituisce il pcb corrispondente al pid dato, NULL altrimenti
 
+/*
 pcb_t *walk(pcb_t *mypcb, pid_t pid){
 	pcb_t *scan;
 	void *tmp;
@@ -70,16 +73,23 @@ pcb_t *walk(pcb_t *mypcb, pid_t pid){
 	}
 	return NULL;
 }
-
+*/
 
 void sysBpHandler(){
 	state_t *sysBp_old = (state_t *) SYSBK_OLDAREA;
 	//non ho capito bene, ma in teoria quando fai la system call ti stora le cose nella old area e quindi tu metti gli stati della od area nel processo corrente, ma non so se va bene
-	copyState(&current_process->p_s, sysBp_old);
+	copyState(&currentProcess->p_s, sysBp_old);
 	//Prendo la causa dell'eccezzione
 	int cause=getCAUSE();
 	//i tipi di cui mi fido di più fanno anche questo, noi quando proviamo commentiamolo e vediamo se funziona
 	cause = CAUSE_EXCCODE_GET(cause);
+
+	/* Salva i parametri delle SYSCALL */
+	unsigned int sysc = sysBp_old->a1;
+	unsigned int argv1 = sysBp_old->a2;
+	unsigned int argv2 = sysBp_old->a3;
+	unsigned int argv3 = sysBp_old->a4;
+
 
 	if(cause == EXC_SYSCALL){ //caso system call
 		//controlla di avere il permesso
@@ -88,11 +98,6 @@ void sysBpHandler(){
 			//essendo sicura di essere in kernel mode posso dire che è finito il tempo utente del processo. Dovrei farlo appena entrata nell'handler? Non cred perché potrei essere capitata qui anche in user mode, solo qui ho la sicurezza di essere in kernel mode
 			currentProcess->p_userTime += getTODLO() - userTimeStart;
 
-			/* Salva i parametri delle SYSCALL */
-			unsigned int sysc = sysBp_old->a1;
-			unsigned int argv1 = sysBp_old->a2;
-			unsigned int argv2 = sysBp_old->a3;
-			unsigned int argv3 = sysBp_old->a4;
 
 
 
@@ -104,7 +109,7 @@ void sysBpHandler(){
 					break;
 
 				case TERMINATEPROCESS:
-					terminateProcess((int) arg1);
+					terminateProcess((pid_t) argv1);
 
 					break;
 
@@ -126,7 +131,7 @@ void sysBpHandler(){
 
 
 				case EXITTRAP:
-					exitTrap((unsigned int) excptype, (unsigned int) retval);
+					exitTrap((unsigned int) argv1, (unsigned int) argv2);
 					break;
 
 				case GETCPUTIME:
@@ -138,7 +143,7 @@ void sysBpHandler(){
 					break;
 
 				case IODEVOP:
-
+					semaphoreOperation ((int *) argv1, (int) argv2);
 					break;
 
 				case GETPID:
@@ -148,26 +153,13 @@ void sysBpHandler(){
 
 
 				default:
-					/* Se non è già stata eseguita la SYS12, viene terminato il processo corrente */
-					if(currentProcess->ExStVec[ESV_SYSBP] == 0)
-					{
-						int ris;
-
-						ris = terminateProcess(-1);
-						if(currentProcess != NULL) currentProcess->p_state.reg_v0 = ris;
-					}
-					/* Altrimenti viene salvata la SysBP Old Area all'interno del processo corrente */
-					else
-					{
-						saveCurrentState(sysBp_old, currentProcess->sysbpState_old);
-						LDST(currentProcess->sysbpState_new);
-					}
+					bpHandler();
 			}
 
 			scheduler();
 
 		}
-		else if(currentProcess->p_s.cpsr & STATUS_USER_MODE) == STATUS_USER_MODE) ){//qui nel caso sono in user mode e provo a fare una syscall faccio come mi dicono le specifiche, copiando le old aree giuste e alzando una trap chiamando l'handler delle trap
+		else if ((currentProcess->p_s.cpsr & STATUS_USER_MODE) == STATUS_USER_MODE) {//qui nel caso sono in user mode e provo a fare una syscall faccio come mi dicono le specifiche, copiando le old aree giuste e alzando una trap chiamando l'handler delle trap
 			if (sysc >= 1 && sysc <= SYSCALL_MAX){
 				state_t *pgmTrap_old = (state_t *) PGMTRAP_OLDAREA;
 				copyState(pgmTrap_old,sysBp_old);
@@ -178,33 +170,7 @@ void sysBpHandler(){
 		}
 
 	}else if ( cause == EXC_BREAKPOINT ){ //caso breakpoint
-
-		//Visto che anche qui non sono sicura in che modalità sono, supponiamo di essere in kernel mode, stoppo il tempo utente
-		currentProcess->p_userTime += getTODLO() - userTimeStart;
-
-		if (currentProcess->p_excpvec[EXCP_SYS_NEW]!=NULL){//vuol dire che era stata chiamata la sys4
-			state_t *proc_new_area = currentProcess->p_excpvec[EXCP_SYS_NEW];
-			state_t *proc_old_area = currentProcess->p_excpvec[EXCP_SYS_OLD];
-			// The processor state is moved from the SYS/Bp Old Area into the processor state stored in the ProcBlk as the SYS/Bp Old Area
-			copyState(proc_old_area, sysBp_old);
-
-			//the four parameter register (a1-a4) are copied from SYS/Bp Old Area to the ProcBlk SYS/Bp New Area
-			proc_new_area->a1=sysBp_old->a1;
-			proc_new_area->a2=sysBp_old->a2;
-			proc_new_area->a3=sysBp_old->a3;
-			proc_new_area->a4=sysBp_old->a4;
-
-			//the lower 4 bits of SYS/Bp Old Area’s cpsr register are copied in the most significant positions of ProcBlk SYS/Bp New Area’s a1 register.
-			/*questo per ora non lo so fare*/
-
-			//Finally, the processor state stored in the ProcBlk as the SYS/Bp New Area is made the current processor state.
-			LDST(proc_new_area);
-		}else{//non è stata fatta la sys4
-
-			terminateProcess(0);
-
-		}
-
+		bpHandler();
 
 
 	}else { //non è ne syscall ne breakpoint
@@ -280,7 +246,7 @@ void terminateProcess(pid_t pid){
 		if(!onDev(pToKill)){
 
 			/* Incrementa il semaforo e aggiorna questo ultimo se vuoto */
-			semaphoreOperation ((int)&pToKill->p_cursem, pToKill->p_resource);
+			semaphoreOperation ((int*)pToKill->p_cursem, pToKill->p_resource);
 			pToKill = outBlocked(pToKill);
 
 			if (pToKill == NULL)
@@ -303,7 +269,7 @@ void terminateProcess(pid_t pid){
 		//qui non so come vedere se ci sono stati errori
 		//if((terminateProcess(pChild->p_pid)) == -1)
 		//	return -1; //ancora errore -->PANIC
-		terminateProcess(pChild->p_pid));
+		terminateProcess(pChild->p_pid);
 	}
 
 	/* Uccide il processo */
@@ -381,7 +347,7 @@ void semaphoreOperation (int *semaddr, int weight){
 //Specify Sys/BP Handler SYS4
 void specifySysBpHandler(memaddr pc, memaddr sp, unsigned int flags){
 
-	if (currentProcess->p_excpvec[EXCP_SYS_NEW]==NULL){
+	if (currentProcess->p_excpvec[EXCP_SYS_NEW]==state_null){
 		state_t *sysBp_new = (state_t *) SYSBK_NEWAREA;
 		sysBp_new->pc=pc;
 		sysBp_new->sp=sp;
@@ -393,7 +359,7 @@ void specifySysBpHandler(memaddr pc, memaddr sp, unsigned int flags){
 
 		//ok, dovrei avere qualcosa per vedere se il processo ha già chiamato questa cosa e non ho la più pallida idea di come fare.
 		//L'idea che mi è venuta è di usare l'exception states vector che sta nel pcb. Se poi vedo che ha un'altra funzione penserò a qualcos'altro
-		currentProcess->p_excpvec[EXCP_SYS_NEW]=sysBp_new;
+		currentProcess->p_excpvec[EXCP_SYS_NEW]=*sysBp_new;
 
 	}else{ //visto che la sys4 settata il vettore delle ecezioni del currentProcess alla new area appena fatta se questo è !=NUll (come succede in questo ramo else), allora vuol dire che la sys4 questo processo l'aveva già chiamata quindi devo comportarmi di conseguenza come dicono le specifche
 		terminateProcess(0);
@@ -404,7 +370,7 @@ void specifySysBpHandler(memaddr pc, memaddr sp, unsigned int flags){
 //Specify TLB Handler SYS5
 void specifyTLBHandler(memaddr pc, memaddr sp, unsigned int flags){
 
-	if (currentProcess->p_excpvec[EXCP_TLB_NEW]==NULL){
+	if (currentProcess->p_excpvec[EXCP_TLB_NEW]==state_null){
 		state_t *TLB_new = (state_t *) TLB_NEWAREA;
 		TLB_new->pc=pc;
 		TLB_new->sp=sp;
@@ -416,9 +382,9 @@ void specifyTLBHandler(memaddr pc, memaddr sp, unsigned int flags){
 
 		//ok, dovrei avere qualcosa per vedere se il processo ha già chiamato questa cosa e non ho la più pallida idea di come fare.
 		//L'idea che mi è venuta è di usare l'exception states vector che sta nel pcb. Se poi vedo che ha un'altra funzione penserò a qualcos'altro
-		currentProcess->p_excpvec[EXCP_TLB_NEW]=TLB_new;
+		currentProcess->p_excpvec[EXCP_TLB_NEW]=*TLB_new;
 
-	}else{ //visto che la sys4 settata il vettore delle ecezioni del currentProcess alla new area appena fatta se questo è !=NUll (come succede in questo ramo else), allora vuol dire che la sys4 questo processo l'aveva già chiamata quindi devo comportarmi di conseguenza come dicono le specifche
+	}else{ //visto che la sys4 settata il vettore delle ecezioni del currentProcess alla new area appena fatta se questo è !=NULL (come succede in questo ramo else), allora vuol dire che la sys4 questo processo l'aveva già chiamata quindi devo comportarmi di conseguenza come dicono le specifche
 		terminateProcess(0);
 	}
 }
@@ -426,7 +392,7 @@ void specifyTLBHandler(memaddr pc, memaddr sp, unsigned int flags){
 //Specify Program Trap Handler (SYS6)
 void specifyPgmTrapHandler(memaddr pc, memaddr sp, unsigned int flags){
 
-	if (currentProcess->p_excpvec[EXCP_PGMT_NEW]==NULL){
+	if (currentProcess->p_excpvec[EXCP_PGMT_NEW]==state_null){
 		state_t *pgmTrap_new = (state_t *) PGMTRAP_NEWAREA;
 		pgmTrap_new->pc=pc;
 		pgmTrap_new->sp=sp;
@@ -438,7 +404,7 @@ void specifyPgmTrapHandler(memaddr pc, memaddr sp, unsigned int flags){
 
 		//ok, dovrei avere qualcosa per vedere se il processo ha già chiamato questa cosa e non ho la più pallida idea di come fare.
 		//L'idea che mi è venuta è di usare l'exception states vector che sta nel pcb. Se poi vedo che ha un'altra funzione penserò a qualcos'altro
-		currentProcess->p_excpvec[EXCP_PGMT_NEW]=pgmTrap_new;
+		currentProcess->p_excpvec[EXCP_PGMT_NEW]=*pgmTrap_new;
 
 	}else{ //visto che la sys4 settata il vettore delle ecezioni del currentProcess alla new area appena fatta se questo è !=NUll (come succede in questo ramo else), allora vuol dire che la sys4 questo processo l'aveva già chiamata quindi devo comportarmi di conseguenza come dicono le specifche
 		terminateProcess(0);
@@ -452,7 +418,7 @@ void exitTrap(unsigned int excptype, unsigned int retval){
 
 	state_t *load;
 	//prendo la old area delle eccezioni che ci serve
-	state_t *old_area = currentProcess->p_excpvec[excptype];
+	state_t *old_area = &currentProcess->p_excpvec[excptype];
 	//metto il valore di ritorno nel registro a1
 	old_area->a1=retval;
 	load=old_area;
@@ -492,11 +458,11 @@ void getCpuTime(cputime_t *global, cputime_t *user){
 void ioDevOp(unsigned int command, int intlNo, unsigned int dnum){
 
 	int dev; //perchè ci serve?
-	dtpreg_t devReg; //registri dei device normali
-	termreg_t termReg; //registro del terminale
+	dtpreg_t *devReg; //registri dei device normali
+	termreg_t *termReg; //registro del terminale
 	int is_read;
 
-	if(dnum >= 0)&&(dnum < N_DEV_PER_IL){//caso accesso a device tranne scrittura su terminale
+	if((dnum >= 0)&&(dnum < N_DEV_PER_IL)){//caso accesso a device tranne scrittura su terminale
 		dev = intlNo - DEV_IL_START; //in arch.h: DEV_IL_START (N_INTERRUPT_LINES - N_EXT_IL) --> 8-5 = 3
 
 		is_read = FALSE;
@@ -515,7 +481,7 @@ void ioDevOp(unsigned int command, int intlNo, unsigned int dnum){
 
 
 	if (intlNo == IL_TERMINAL){//azioni su terminali
-		termReg=DEV_REG_ADDR(intlNo, dnum);
+		termReg=(termreg_t *)DEV_REG_ADDR(intlNo, dnum);
 		if (is_read){
 			termReg->recv_command=command;
 		}
@@ -525,7 +491,7 @@ void ioDevOp(unsigned int command, int intlNo, unsigned int dnum){
 
 	}
 	else{//azioni su altri device
-		devReg=DEV_REG_ADDR(intlNo, dnum);
+		devReg=(dtpreg_t *)DEV_REG_ADDR(intlNo, dnum);
 		devReg->command=command;
 	}
 
@@ -562,9 +528,9 @@ void pgmTrapHandler(){
 	*/
 
 
-	if (currentProcess->p_excpvec[EXCP_PGMT_NEW]!=NULL){//vuol dire che era stata chiamata la sys5
-		state_t *proc_new_area = currentProcess->p_excpvec[EXCP_PGMT_NEW];
-		state_t *proc_old_area = currentProcess->p_excpvec[EXCP_PGMT_OLD];
+	if (currentProcess->p_excpvec[EXCP_PGMT_NEW]!=state_null){//vuol dire che era stata chiamata la sys5
+		state_t *proc_new_area = &currentProcess->p_excpvec[EXCP_PGMT_NEW];
+		state_t *proc_old_area = &currentProcess->p_excpvec[EXCP_PGMT_OLD];
 		// The processor state is moved from the PgmTrap Old Area into the processor state stored in the ProcBlk as the PgmTrap Old Area
 		copyState(proc_old_area, pgmTrap_old);
 
@@ -597,9 +563,9 @@ void tlbHandler(){
 	*/
 
 
-	if (currentProcess->p_excpvec[EXCP_TLB_NEW]!=NULL){//vuol dire che era stata chiamata la sys5
-		state_t *proc_new_area = currentProcess->p_excpvec[EXCP_TLB_NEW];
-		state_t *proc_old_area = currentProcess->p_excpvec[EXCP_TLB_OLD];
+	if (currentProcess->p_excpvec[EXCP_TLB_NEW]!=state_null){//vuol dire che era stata chiamata la sys5
+		state_t *proc_new_area = &currentProcess->p_excpvec[EXCP_TLB_NEW];
+		state_t *proc_old_area = &currentProcess->p_excpvec[EXCP_TLB_OLD];
 		// The processor state is moved from the tlb Old Area into the processor state stored in the ProcBlk as the TLB Old Area
 		copyState(proc_old_area, tlb_old);
 
@@ -613,4 +579,36 @@ void tlbHandler(){
 		terminateProcess(0);
 
 	}
+}
+
+
+void bpHandler(){
+
+	//Visto che anche qui non sono sicura in che modalità sono, supponiamo di essere in kernel mode, stoppo il tempo utente
+	currentProcess->p_userTime += getTODLO() - userTimeStart;
+	state_t *sysBp_old = (state_t *) SYSBK_OLDAREA;
+	if (currentProcess->p_excpvec[EXCP_SYS_NEW]!=state_null){//vuol dire che era stata chiamata la sys4
+		state_t *proc_new_area = &currentProcess->p_excpvec[EXCP_SYS_NEW];
+		state_t *proc_old_area = &currentProcess->p_excpvec[EXCP_SYS_OLD];
+		// The processor state is moved from the SYS/Bp Old Area into the processor state stored in the ProcBlk as the SYS/Bp Old Area
+		copyState(proc_old_area, sysBp_old);
+
+		//the four parameter register (a1-a4) are copied from SYS/Bp Old Area to the ProcBlk SYS/Bp New Area
+		proc_new_area->a1=sysBp_old->a1;
+		proc_new_area->a2=sysBp_old->a2;
+		proc_new_area->a3=sysBp_old->a3;
+		proc_new_area->a4=sysBp_old->a4;
+
+		//the lower 4 bits of SYS/Bp Old Area’s cpsr register are copied in the most significant positions of ProcBlk SYS/Bp New Area’s a1 register.
+		/*questo per ora non lo so fare*/
+
+		//Finally, the processor state stored in the ProcBlk as the SYS/Bp New Area is made the current processor state.
+		LDST(proc_new_area);
+	}else{//non è stata fatta la sys4
+
+		terminateProcess(0);
+
+	}
+
+
 }

@@ -2,6 +2,9 @@
 #define SCHED_H_INCLUDED
 
 
+#define PSEUDO_CLOCK 0
+#define TIME_SLICE 1
+
 //ultima partenza del time slice
 extern unsigned int last_slice_start;
 //per contare lo userTime del processo corrente

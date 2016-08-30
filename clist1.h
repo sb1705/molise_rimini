@@ -66,9 +66,13 @@ const typeof( ((type *)0)->member ) *__mptr = (ptr);  \
 /* return the pointer of the first element of the circular queue.
  elem is also an argument to retrieve the type of the element */
 /* member is the field of *elem used to link this list */
+ /*rivedere cosa delle graffe */
+#define clist_head(elem, clistx, member)    \
+    if (!clist_empty(*(clistx))){\
+    	elem=container_of((clistx).next->next, typeof(*elem), member); \
+    }\
+    else NULL;
 
-#define clist_head(elem, clistx, member)     \
-    ({elem=container_of((clistx).next->next, typeof(*elem), member); })
 
 
 
@@ -77,7 +81,11 @@ const typeof( ((type *)0)->member ) *__mptr = (ptr);  \
 /* member is the field of *elem used to link this list */
 
 #define clist_tail(elem, clistx, member)    \
-    ({elem=container_of((clistx).next, typeof(*elem), member); })
+    if (!clist_empty(*(clistx))){\
+    	elem=container_of((clistx).next, typeof(*elem), member); \
+    }\
+    else NULL;
+
 
 
 /* clist_pop and clist__dequeue are synonyms */
@@ -86,10 +94,13 @@ const typeof( ((type *)0)->member ) *__mptr = (ptr);  \
 
 #define clist_pop(clistp) clist__dequeue(clistp)
 #define clist_dequeue(clistp) \
-    if((clistp)->next==(clistp)->next->next) 		/*caso lista vuota o con un solo elemento*/\
+	if(!clist_empty(*(clistp))) \
+    {if((clistp)->next==(clistp)->next->next) 		/*caso lista vuota o con un solo elemento*/\
         (clistp)->next=NULL; \
     else   											/*caso almeno due elementi*/ \
-        (clistp)->next->next=(clistp)->next->next->next;
+        (clistp)->next->next=(clistp)->next->next->next;\
+    }\
+    else NULL;
 
 
 /* delete from a circular list the element whose pointer is elem */
@@ -131,10 +142,7 @@ for ((scan)=container_of((clistp)->next->next, typeof(*scan), member), (tmp)=NUL
  true if it scanned all the elements */
 
 #define clist_foreach_all(scan, clistp, member, tmp) ({ \
-    int ret;   		/*valore di ritorno*/\
-    if((tmp) != (clistp)->next) ret=0;   \
-    else ret= 1;  \
-    ret; })
+    ((tmp) == (clistp)->next)  })
 
 
 /* this macro should be used *inside* a clist_foreach loop to delete the

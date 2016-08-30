@@ -1068,3 +1068,103 @@ Lo stesso per termReg in intTerm.
 Ok, ho finito di leggere interrupt.c
 Domani manca solo da riflettere sul commento sul tempo dentro intTimer()
 Ora sono stanca e rischio solo di far casini.
+
+30/08
+
+Io inizio con la compilazione, incrociamo le dita xD
+
+initial.c
+
+Ho avuto un po' di problemi con gli include ma sono sistemati
+
+Ho copiato la clist.h che avevo nel mio progetto (quello che abbiamo consegnato)
+per fase 1 perché mi dava problemi con la compilazione (quello "vecchio" l'ho
+chiamato clist1). Il problema però non è stato risolto
+
+Nella compilazione mi da questo errore :
+
+      In file included from types.h:4:0,
+            from pcb.h:4,
+            from initial.c:1:
+      initial.c: In function 'main':
+      clist.h:26:20: error: expected expression before '{' token
+      #define CLIST_INIT {NULL}
+                        ^
+      initial.c:166:15: note: in expansion of macro 'CLIST_INIT'
+      readyQueue = CLIST_INIT ;
+                  ^
+
+Non capisco il perché di questo errore: se compilo clist.h da solo non da problemi,
+se compilo il p1test.c (dove ci sta la stessa operazione dove qui ci da
+errore) non ci sono problemi, non so cos'è successo
+
+Ho risolto in modo misterioso:
+praticamente ho commentato il punto in cui definivamo la readyQueue (riga 46)
+e l'ho ridefinita a riga 166 dove ci dava il problema.
+Ripeto che la cosa è strana. Però ora compila
+
+
+scheduler.c
+
+Lo scheduler ha avuto solo un paio di problemi di puntatori.
+Però mi ha fatto salire un dubio: perché la readyQueue non la abbiamo fatto
+puntatore ? Quando la usiamo devo sempre passarla come &readyQueue...
+Quando lo lanceremo vedremo se funziona e se funziona allora va bene così
+
+exceptions.c
+
+La walk non compila quindi, visto che per ora non la usiamo, l'ho commentata
+
+Mi sono ricordata cosa volevamo chiedere: il fatto che se voglio terminare un
+processo che non è della mia progenie come mi devo comportare? Devo dare errore?
+In che modo vedo che non è progenie? Rendo prorpio inaccessibili i pid o facciamo
+la walk?
+
+
+Ho dovuto cambiare l'azione di default delle sysBpHandler. Dalle specifiche
+mi sembra che l'azione di default sia lo stesso che devi fare se hai un breakpoint,
+per evitare ripetizioni di codice ho fatto una funione a parte per l'handler
+dei bp (prova però a leggere le specifiche e vedere se ho ragione a voler
+fare così) [l'ho messo in fondo, si chiama bpHandler]. Facendo questo mi dava
+problemi son la definizione di sysBp_old quindi l'ho ridefinito (riga intorno
+alla 589). Nel caso ci dia problemi in esecuzione facciamola globale
+
+
+Ci sono problemi per quando lo stato è null quindi ho deciso di chiedere a giacomo,
+lui mi ha dato due soluzioni:
+
+fare una variabile:
+
+"Trovi quanti byte è lunga state_t e fai una costante STATE_NULL = 0x[00]*[numero di byte]"
+
+oppure:
+
+"state_t state_null;
+memset(state_null, 0, sizeof(state_t));
+
+
+E poi puoi fare
+pcb->p_s = state_null;
+if (pcb->p_s == state_null)
+
+con
+
+/*
+ * Set every byte from s to s+n to c.
+ * Returns a pointer to s.
+ */
+void *memset(void *s, int c, size_t n)
+{
+    unsigned char* p=s;
+    while(n--)
+        *p++ = c;
+    return s;
+}"
+
+Ho deciso di usare il secondo modo perché non ho capito benissimo come usare
+l'altro. Ho fatto un po di casini perché non so bene come definire la state_null:
+alla fine è dichiarata globale in pcb.h e l'ho inizializzata sia in initial.c
+che in pcb.c e la dichiarazione di memset e in pcb.c, se si trovo un modo più
+coerente di farlo però è meglio.
+
+Ancora non compila, ma ho un idea, domani o dopodomani finisco la compilazione

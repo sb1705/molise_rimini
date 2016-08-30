@@ -5,6 +5,17 @@ struct pcb_t pcbs[MAXPROC];					//utilizzato per allocare la memoria necessaria
 /* ALLOCAZIONE E DEALLOCAZIONE DI PROCBLK
    ====================================== */
 
+   /*
+    * Set every byte from s to s+n to c.
+    * Returns a pointer to s.
+    */
+   void *memset(void *s, int c, size_t n)
+   {
+       unsigned char* p=s;
+       while(n--)
+           *p++ = c;
+       return s;
+   }
 
 //Mette in coda il processo puntato da p nella pcbFree.
 
@@ -13,9 +24,12 @@ void freePcb(struct pcb_t *p){
 }
 
 
+
+
 //Rimuove un processo dalla pcbFree e ne ritorna il puntatore.
 
 struct pcb_t *allocPcb(){
+	int i;
 	if (clist_empty(pcbFree)){					//Nessun processo libero
 		return (NULL);
 
@@ -23,18 +37,19 @@ struct pcb_t *allocPcb(){
 	struct pcb_t *p;							//Processo da allocare
     clist_head(p, pcbFree, p_list);
 	clist_dequeue(&pcbFree);
+	memset(&state_null, 0, sizeof(state_t));
     	p->p_parent=NULL;
 	p->p_cursem=NULL;
 	p->p_pid=0;
-	p->p_s=0;
+	p->p_s=state_null;
 	p->p_resource=0;
 	p->p_userTime=0;
 	p->p_CPUTime=0;
 	p->p_list.next=NULL;
 	p->p_children.next=NULL;
 	p->p_siblings.next=NULL;
-	for (int i=0; i<EXCP_COUNT; i++){
-		p->p_excpvec[i]=NULL;
+	for (i=0; i<EXCP_COUNT; i++){
+		p->p_excpvec[i]=state_null	;
 	}
 	return (p);
 

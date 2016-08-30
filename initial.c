@@ -1,11 +1,13 @@
 #include "pcb.h"
 #include "asl.h"
-
+#include "initial.h"
 #include "scheduler.h"
+#include "exceptions.h"
+#include "interrupts.h"
 
-#include <libuarm.h>
-#include <arch.h>
-#include <uARMconst.h>
+#include </usr/include/uarm/libuarm.h>
+#include </usr/include/uarm/arch.h>
+#include </usr/include/uarm/uARMconst.h>
 
 
 /* definizione della struttura state_t preso dal manuale uARM
@@ -41,12 +43,12 @@ extern void test();
 
 //variabili globali
 
-clist readyQueue; //pointer to a queue of pcb?? è una clist?? -> si, perchè quando facciamo insertProcB mettiamo una clist e un pcb
+//clist readyQueue; //pointer to a queue of pcb?? è una clist?? -> si, perchè quando facciamo insertProcB mettiamo una clist e un pcb
 pcb_t *currentProcess;
 unsigned int processCount; //è giusto farli int?
 unsigned int softBlockCount;
 // struttura per i pcb attivi
-pcb_t active_pcb[MAXPROC];
+pcb_t *active_pcb[MAXPROC];
 
 //semafori per i device -> NB per il terminale sono due
 //i semafori a loro volta hanno 8 indici, uno per ogni linea di interrupt -> perchè? -> intanto io metto solo a semplicei int
@@ -58,6 +60,9 @@ pcb_t active_pcb[MAXPROC];
 //i vari semafori
 int devices[DEV_USED_INTS+1][DEV_PER_INT];
 int pseudoClock; //è un semaforo
+
+
+
 
 
 //funzione che inizializza un'area con il gestore passato come parametro
@@ -118,7 +123,7 @@ void copyState(state_t *dest, state_t *src){
 	dest->CP15_EntryHi = src->CP15_EntryHi;
 	dest->CP15_Cause = src->CP15_Cause;
 	dest->TOD_Hi = src->TOD_Hi;
-	dest->TOD_Low = src->destD_Low;
+	dest->TOD_Low = src->TOD_Low;
 }
 
 
@@ -127,6 +132,7 @@ int main(){
 	int i,j;
 	pcb_t *first;
 
+	memset(&state_null, 0, sizeof(state_t));
 	// ----1----
 
 	//gli handler dovranno essere implementati in exception.c -> conversione da funzione a indirizzo di memoria?? si può fare?? boh
@@ -161,7 +167,7 @@ int main(){
 
 	//Initialize all nucleus maintained variables: Process Count, Soft-block Count, Ready Queue, and Current Process.
 
-	readyQueue = CLIST_INIT;
+	clist readyQueue = CLIST_INIT;
 	currentProcess = NULL;
 	processCount = 0;
 	softBlockCount = 0;
@@ -170,7 +176,7 @@ int main(){
 
 	/* Inizializzazione della tabella dei pcb utilizzati */
 	for(i=0; i<MAXPROC; i++){
-			active_pcb[i].pcb = NULL;
+			active_pcb[i] = NULL;
 	}
 
 	// ----4----

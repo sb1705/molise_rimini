@@ -27,7 +27,7 @@ int device_numb(memaddr *pending){
 }
 
 
-void interruptHandler(){
+void intHandler(){
 
 	state_t *retState;
 	/* Var definita due volte, tolgo questa e lascio quella sopra

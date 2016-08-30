@@ -1,7 +1,8 @@
 #ifndef INIT_H_INCLUDED
 #define INIT_H_INCLUDED
 
-#include <uARMconst.h>
+#include "types.h"
+#include </usr/include/uarm/uARMconst.h>
 //Tutte le variabili globali vanno mantenute in degli header, quindi metto qui le variabili globali definite nell'initial.c
 
 // A pointer to a queue of ProcBlks representing processes that are ready and waiting for a turn at execution
@@ -13,7 +14,7 @@ extern unsigned int softBlockCount;
 //A pointer to a ProcBlk that represents the current executing process.
 extern pcb_t *currentProcess;
 // struttura per i pcb attivi
-extern pcb_t active_pcb[MAXPROC];
+extern pcb_t *active_pcb[MAXPROC];
 
 //semafori di device e pseudoClock
 extern int devices[DEV_USED_INTS+1][DEV_PER_INT];

@@ -1,13 +1,19 @@
-#ifndef TYPES_H
-#define TYPES_h
+#ifndef _TYPES_H
+#define _TYPES_H
 
 #include "clist.h"
-#include <uARMtypes.h>
+#include </usr/include/uarm/uARMtypes.h>
 #include "const.h"
 
 typedef unsigned int size_t;
 typedef unsigned int pid_t;
 typedef unsigned int cputime_t;
+
+
+typedef struct clist {
+    struct clist *next;
+}clist;
+
 
 struct semd_t{
 
@@ -15,6 +21,8 @@ struct semd_t{
     struct clist s_link;
     struct clist s_procq;
 };
+
+
 
 /* process control block type */
 typedef struct pcb_t {

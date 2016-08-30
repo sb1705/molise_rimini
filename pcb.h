@@ -5,6 +5,16 @@
 #include "const.h"
 #include "clist.h"
 
+
+extern state_t state_null;
+
+
+/*
+ * Set every byte from s to s+n to c.
+ * Returns a pointer to s.
+ */
+void *memset(void *s, int c, size_t n);
+
 void freePcb(struct pcb_t *p);
 
 struct pcb_t *allocPcb() ;
