@@ -7,7 +7,7 @@
 
 #include </usr/include/uarm/libuarm.h>
 #include </usr/include/uarm/arch.h>
-#include </usr/include/uarm/uARMconst.h>
+//#include </usr/include/uarm/uARMconst.h>
 
 
 /* definizione della struttura state_t preso dal manuale uARM
@@ -43,7 +43,7 @@ extern void test();
 
 //variabili globali
 
-//clist readyQueue; //pointer to a queue of pcb?? è una clist?? -> si, perchè quando facciamo insertProcB mettiamo una clist e un pcb
+clist readyQueue = CLIST_INIT; //pointer to a queue of pcb?? è una clist?? -> si, perchè quando facciamo insertProcB mettiamo una clist e un pcb
 pcb_t *currentProcess;
 unsigned int processCount; //è giusto farli int?
 unsigned int softBlockCount;
@@ -132,7 +132,7 @@ int main(){
 	int i,j;
 	pcb_t *first;
 
-	
+
 	// ----1----
 
 	//gli handler dovranno essere implementati in exception.c -> conversione da funzione a indirizzo di memoria?? si può fare?? boh
@@ -167,7 +167,7 @@ int main(){
 
 	//Initialize all nucleus maintained variables: Process Count, Soft-block Count, Ready Queue, and Current Process.
 
-	clist readyQueue = CLIST_INIT;
+	//readyQueue = CLIST_INIT;
 	currentProcess = NULL;
 	processCount = 0;
 	softBlockCount = 0;

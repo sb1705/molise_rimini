@@ -1,7 +1,7 @@
 #ifndef _TYPES_H
 #define _TYPES_H
 
-#include "clist.h"
+//#include "clist.h"
 #include </usr/include/uarm/uARMtypes.h>
 #include "const.h"
 

@@ -1102,13 +1102,20 @@ Ho risolto in modo misterioso:
 praticamente ho commentato il punto in cui definivamo la readyQueue (riga 46)
 e l'ho ridefinita a riga 166 dove ci dava il problema.
 Ripeto che la cosa è strana. Però ora compila
-
+---------------------
+Anche io ho avuto problemi con la readyQueue, vedi punto 4) del 2/9
+---------------------
 
 scheduler.c
 
 Lo scheduler ha avuto solo un paio di problemi di puntatori.
 Però mi ha fatto salire un dubio: perché la readyQueue non la abbiamo fatto
 puntatore ? Quando la usiamo devo sempre passarla come &readyQueue...
+----------------
+Credo sia perchè in questo modo inizialmente allochiamo spazio per una struttura
+ma in effetti non ha molto senso. Ho paura a cambiare dato che mi hai detto che
+così compila
+----------------
 Quando lo lanceremo vedremo se funziona e se funziona allora va bene così
 
 exceptions.c
@@ -1189,3 +1196,37 @@ mi ritorna 0
 interrupt.c
 
 Nessun problema
+
+2/30
+Notate cose strane:
+1)
+#include </usr/include/uarm/uARMconst.h>
+appare sia in initial.c che in initial.h, ne commento uno (quello nel .c)
+2)
+Mi da errore appena include uARMtypes.h perchè dentro quest'ultimo
+c'è #include <uARMconst.h>
+Ho modificato <> con ""  e funziona però non credo che possiamo modificare le cose
+di uARM... come faceva a compilarti le cose singolarmente?
+lo stesso per il p2test in cui gli include di pcb.h e const.h erano con <>
+modificato anche qui con "" ... boh.
+3)
+types.h e clist.h si includono a vicenda, è normale?
+ho commentato l'inclusione di clist.h dentro types, non dovrebbe dare errori.
+4)
+Ogni file che usava la readyQueue mi dava errore di compilazione perchè non la
+trovava. Ho capito l'"errore" guardando il test di phase1: ho visto che per qualche
+strano motivo possiamo usare la CLIST_INIT solo al momento della dichiarazione
+della struttura.
+Alla fine ho rimesso la dichiarazione globale e in questo modo viene vista
+dagli altri moduli. Non so se va bene inizializzarla nell'ambiente globale perchè
+nelle specifiche diceva di inizilizzare la readyQueue nella funzione main.
+Un modo di risolvere il problema sarebbe di trasformare la readyQueue in puntatore
+però non mi convince questa soluzione perchè la readyQueue nel mio schemino mentale
+rappresenta il puntatore alla coda di una lista circolare. Secondo me se lo facciamo
+puntatore dal principio poi il primo proc creato diventerà il puntatore alla lista circolare
+e non farà parte della lista circolare stessa. Non so se mi sono spiegata bene, in
+caso ne parliamo a voce.
+5)
+Continua a darmi errore perchè non trova una funzione che si chiama memcpy negli
+handler in exceptions... Non so più dove cercare e per ora mi arrendo e vado a fare tech.
+risolto questo dovrebbe andare tutto.
