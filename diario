@@ -1168,3 +1168,24 @@ che in pcb.c e la dichiarazione di memset e in pcb.c, se si trovo un modo più
 coerente di farlo però è meglio.
 
 Ancora non compila, ma ho un idea, domani o dopodomani finisco la compilazione
+
+2/09
+
+
+Continuando con la compilazione
+
+exceptions.c
+
+Cambiato idea, conviene non usare la state_null ma fare una funzione che vede
+se la struttura e nulla perché non si possono confrontare le sturtture con ==
+(maledetto c -_-), quindi ora non uso più state_null come variabile globale
+ma mi faccio una funzione che fa i controlli
+Praticamente uso due funzioni, la isNULL ritorna 1 se lo state è nullo, mentre
+0 se non lo è. In questa funzione uso la memset per farmi una struttura tutta
+nulla (state_null) e poi uso memsmp per comparare la stuttura nulla e quella che
+passo. La memcmp funziona come le stringhe: se le due strutture sono uguali
+mi ritorna 0
+
+interrupt.c
+
+Nessun problema

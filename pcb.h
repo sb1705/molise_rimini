@@ -6,7 +6,7 @@
 #include "clist.h"
 
 
-extern state_t state_null;
+
 
 
 /*

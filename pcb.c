@@ -37,11 +37,12 @@ struct pcb_t *allocPcb(){
 	struct pcb_t *p;							//Processo da allocare
     clist_head(p, pcbFree, p_list);
 	clist_dequeue(&pcbFree);
-	memset(&state_null, 0, sizeof(state_t));
+
     	p->p_parent=NULL;
 	p->p_cursem=NULL;
 	p->p_pid=0;
-	p->p_s=state_null;
+	//p->p_s=state_null; per fare questa operazione faccio la memset su p->p_s
+      memset(&p->p_s, 0, sizeof(state_t));
 	p->p_resource=0;
 	p->p_userTime=0;
 	p->p_CPUTime=0;
@@ -49,7 +50,8 @@ struct pcb_t *allocPcb(){
 	p->p_children.next=NULL;
 	p->p_siblings.next=NULL;
 	for (i=0; i<EXCP_COUNT; i++){
-		p->p_excpvec[i]=state_null	;
+		//p->p_excpvec[i]=state_null	; anche qui uso la memset
+            memset(&p->p_excpvec[1], 0, sizeof(state_t));
 	}
 	return (p);
 

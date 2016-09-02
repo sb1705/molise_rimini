@@ -1,9 +1,12 @@
-#include "asl.e"
+#include "asl.h"
 #include "pcb.h"
 #include "scheduler.h"
 #include "exceptions.h"
+#include "initial.h"
+#include "interrupts.h"
 
-#include <libuarm.h>
+#include </usr/include/uarm/arch.h>
+#include </usr/include/uarm/libuarm.h>
 
 cputime_t interStart; //mi sa che devo farla globale
 
@@ -11,7 +14,8 @@ cputime_t interStart; //mi sa che devo farla globale
 int device_numb(memaddr *pending){
 	int bitmap= *pending;
 	int devn;
-	for (int i=0; i<8; i++){ //itero per tutti e 8 i bit
+	int i;
+	for (i=0; i<8; i++){ //itero per tutti e 8 i bit
 		if (1 & bitmap){ //se l'iesimo bit era acceso
 			devn=i; // lo salvo e lo ritorno
 			break;
@@ -40,7 +44,7 @@ void intHandler(){
 
 	/*Decremento pc all'istruzione che stavamo eseguendo  --> riguardare */
 	retState = (state_t *) INT_OLDAREA;
-	retState->s_pc = retState->s_pc - 4;
+	retState->pc = retState->pc - 4;
 
 	//salvo la causa dell'interrupt
 	cause = getCAUSE();
@@ -72,8 +76,8 @@ void intHandler(){
 	else if (CAUSE_IP_GET(cause, IL_PRINTER)){
 		intDev(IL_PRINTER);
 	}
-	else if (CAUSE_IP_GET(cause, TERMINAL)){
-		intTerm(TERMINAL);
+	else if (CAUSE_IP_GET(cause, IL_TERMINAL)){
+		intTerm(IL_TERMINAL);
 	}
 
 	scheduler();
@@ -88,8 +92,8 @@ void intDev(int int_no){ //gestore dell'interruptdi device, ho come argomento la
 	dtpreg_t *devReg; //registro del device
 	pending= (memaddr *)CDEV_BITMAP_ADDR(int_no);//indirizzo della bitmap dove ci dice su quali device pendono gli interrupt
 	devnumb= device_numb(pending);//prendiamo solo uno dei device su cui pendiamo
-	sem=&devices[int_no-DEVINTBASE][devnumb];
-	devReg=DEV_REG_ADDR(int_no, devnumb);
+	sem=&devices[int_no-DEV_IL_START][devnumb];
+	devReg= (dtpreg_t *) DEV_REG_ADDR(int_no, devnumb);
 	//da qui in poi Sara fai attenzione a come uso i puntatori che come al solito non sono sicura
 	devReg->command = DEV_C_ACK;	//passo l'acknowledgement (DEV_C_ACK sta in uARMconst)
 
@@ -98,7 +102,7 @@ void intDev(int int_no){ //gestore dell'interruptdi device, ho come argomento la
 		semaphoreOperation(sem,1); //device starting interrupt line DEVINTBASE = 3 --> const.h
 		if (unblck_proc!=NULL){
 
-			unblck_proc->a1=devReg->status;
+			unblck_proc->p_s.a1=devReg->status;
 		}
 	}
 
@@ -114,31 +118,31 @@ void intTerm(int int_no){
 	pending= (memaddr *)CDEV_BITMAP_ADDR(int_no);//indirizzo della bitmap dove ci dice su quali device pendono gli interrupt
 	devnumb= device_numb(pending); //prendiamo solo uno dei device su cui pendiamo
 
-	termReg=DEV_REG_ADDR(int_no, devnumb);
+	termReg=(termreg_t *)DEV_REG_ADDR(int_no, devnumb);
 
 	//dcrivere ha la priorità sul leggere, quidni prima leggiamo :
 	if ((termReg->transm_status & DEV_TERM_STATUS)== DEV_TTRS_S_CHARTRSM){//le cose in maiuscolo sono in uARMconst
 
-		sem=&devices[int_no-DEVINTBASE][devnumb];//se è trasmissione allora il semaforo è quello di trasmissione
+		sem=&devices[int_no-DEV_IL_START][devnumb];//se è trasmissione allora il semaforo è quello di trasmissione
 		termReg->transm_command=DEV_C_ACK;//riconosco l'interrupt
 		if (*sem < 1){
 			unblck_proc = headBlocked(sem);
 			semaphoreOperation(sem,1);
 			if (unblck_proc!=NULL){
-				unblck_proc->a1=termReg->transm_status;
+				unblck_proc->p_s.a1=termReg->transm_status;
 			}
 		}
 
 	}
 	else if ((termReg->recv_status & DEV_TERM_STATUS) == DEV_TRCV_S_CHARRECV){
-		sem=&devices[int_no-DEVINTBASE+1][devnumb];//se è di ricevere allora il semaforo è l'ultimo
+		sem=&devices[int_no-DEV_IL_START+1][devnumb];//se è di ricevere allora il semaforo è l'ultimo
 		termReg->recv_command=DEV_C_ACK;
 
 		if (*sem < 1){
 			unblck_proc = headBlocked(sem);
 			semaphoreOperation(sem,1); //device starting interrupt line DEVINTBASE = 3 --> const.h
 			if (unblck_proc!=NULL){
-				unblck_proc->a1=termReg->recv_status;
+				unblck_proc->p_s.a1=termReg->recv_status;
 			}
 		}
 
@@ -148,7 +152,7 @@ void intTerm(int int_no){
 void intTimer(){
 	if (current_timer=TIME_SLICE){
 		if (currentProcess!=NULL){
-			insertProcQ(readyQueue, currentProcess);
+			insertProcQ(&readyQueue, currentProcess);
 			//qui gli altri aggiornavano anche il tempo di cpu, ma io no capisco perché bisognerebbe farlo visto che lo abbiamo già fatto sopra, secondo te?
 			//logicamente avrebbe senso aggiornarlo qui, ma il dubbio è (che forse va cercato nel libro perché è abbastanza teoria):
 			// quando sto gestendo un interrupt il processo che è ufficialmente nella cpu è il processo che era già sulla cpu o l'interrupt handler?

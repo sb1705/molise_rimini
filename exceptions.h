@@ -24,4 +24,8 @@ void waitClock();
 void ioDevOp(unsigned int command, int intlNo, unsigned int dnum);
 pid_t getPid();
 
+
+int memcmp(const void* s1, const void* s2,size_t n);
+int isNull(state_t *state);
+
 #endif

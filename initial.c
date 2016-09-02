@@ -132,7 +132,7 @@ int main(){
 	int i,j;
 	pcb_t *first;
 
-	memset(&state_null, 0, sizeof(state_t));
+	
 	// ----1----
 
 	//gli handler dovranno essere implementati in exception.c -> conversione da funzione a indirizzo di memoria?? si può fare?? boh

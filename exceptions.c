@@ -75,6 +75,33 @@ pcb_t *walk(pcb_t *mypcb, pid_t pid){
 }
 */
 
+
+
+/*per vedere se la struttura è nulla*/
+
+
+int memcmp(const void* s1, const void* s2,size_t n)
+{
+    const unsigned char *p1 = s1, *p2 = s2;
+    while(n--)
+        if( *p1 != *p2 )
+            return *p1 - *p2;
+        else
+            p1++,p2++;
+    return 0;
+}
+
+int isNull(state_t *state){
+	state_t state_null;
+	memset(&state_null, 0, sizeof(state_t));
+	if (!memcmp(state,&state_null, sizeof(state_t))){
+		return 1;
+	}else{
+		return 0;
+	}
+}
+
+
 void sysBpHandler(){
 	state_t *sysBp_old = (state_t *) SYSBK_OLDAREA;
 	//non ho capito bene, ma in teoria quando fai la system call ti stora le cose nella old area e quindi tu metti gli stati della od area nel processo corrente, ma non so se va bene
@@ -346,8 +373,8 @@ void semaphoreOperation (int *semaddr, int weight){
 
 //Specify Sys/BP Handler SYS4
 void specifySysBpHandler(memaddr pc, memaddr sp, unsigned int flags){
-
-	if (currentProcess->p_excpvec[EXCP_SYS_NEW]==state_null){
+	//voglio fare if (currentProcess->p_excpvec[EXCP_SYS_NEW]==NULL)
+	if (isNull(&currentProcess->p_excpvec[EXCP_SYS_NEW]) ){
 		state_t *sysBp_new = (state_t *) SYSBK_NEWAREA;
 		sysBp_new->pc=pc;
 		sysBp_new->sp=sp;
@@ -370,7 +397,7 @@ void specifySysBpHandler(memaddr pc, memaddr sp, unsigned int flags){
 //Specify TLB Handler SYS5
 void specifyTLBHandler(memaddr pc, memaddr sp, unsigned int flags){
 
-	if (currentProcess->p_excpvec[EXCP_TLB_NEW]==state_null){
+	if (isNull(&currentProcess->p_excpvec[EXCP_SYS_NEW])){
 		state_t *TLB_new = (state_t *) TLB_NEWAREA;
 		TLB_new->pc=pc;
 		TLB_new->sp=sp;
@@ -392,7 +419,7 @@ void specifyTLBHandler(memaddr pc, memaddr sp, unsigned int flags){
 //Specify Program Trap Handler (SYS6)
 void specifyPgmTrapHandler(memaddr pc, memaddr sp, unsigned int flags){
 
-	if (currentProcess->p_excpvec[EXCP_PGMT_NEW]==state_null){
+	if (isNull(&currentProcess->p_excpvec[EXCP_SYS_NEW])){
 		state_t *pgmTrap_new = (state_t *) PGMTRAP_NEWAREA;
 		pgmTrap_new->pc=pc;
 		pgmTrap_new->sp=sp;
@@ -526,9 +553,9 @@ void pgmTrapHandler(){
 	cause=CAUSE_EXCCODE_GET(cause);
 
 	*/
+	//Volgio fare questo -->if (currentProcess->p_excpvec[EXCP_PGMT_NEW]!=NULL)
 
-
-	if (currentProcess->p_excpvec[EXCP_PGMT_NEW]!=state_null){//vuol dire che era stata chiamata la sys5
+	if (!isNull(&currentProcess->p_excpvec[EXCP_SYS_NEW])){//vuol dire che era stata chiamata la sys5
 		state_t *proc_new_area = &currentProcess->p_excpvec[EXCP_PGMT_NEW];
 		state_t *proc_old_area = &currentProcess->p_excpvec[EXCP_PGMT_OLD];
 		// The processor state is moved from the PgmTrap Old Area into the processor state stored in the ProcBlk as the PgmTrap Old Area
@@ -563,7 +590,7 @@ void tlbHandler(){
 	*/
 
 
-	if (currentProcess->p_excpvec[EXCP_TLB_NEW]!=state_null){//vuol dire che era stata chiamata la sys5
+	if (!isNull(&currentProcess->p_excpvec[EXCP_SYS_NEW])){//vuol dire che era stata chiamata la sys5
 		state_t *proc_new_area = &currentProcess->p_excpvec[EXCP_TLB_NEW];
 		state_t *proc_old_area = &currentProcess->p_excpvec[EXCP_TLB_OLD];
 		// The processor state is moved from the tlb Old Area into the processor state stored in the ProcBlk as the TLB Old Area
@@ -587,7 +614,7 @@ void bpHandler(){
 	//Visto che anche qui non sono sicura in che modalità sono, supponiamo di essere in kernel mode, stoppo il tempo utente
 	currentProcess->p_userTime += getTODLO() - userTimeStart;
 	state_t *sysBp_old = (state_t *) SYSBK_OLDAREA;
-	if (currentProcess->p_excpvec[EXCP_SYS_NEW]!=state_null){//vuol dire che era stata chiamata la sys4
+	if (!isNull(&currentProcess->p_excpvec[EXCP_SYS_NEW])){//vuol dire che era stata chiamata la sys4
 		state_t *proc_new_area = &currentProcess->p_excpvec[EXCP_SYS_NEW];
 		state_t *proc_old_area = &currentProcess->p_excpvec[EXCP_SYS_OLD];
 		// The processor state is moved from the SYS/Bp Old Area into the processor state stored in the ProcBlk as the SYS/Bp Old Area
