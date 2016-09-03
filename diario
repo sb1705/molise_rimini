@@ -1230,3 +1230,10 @@ caso ne parliamo a voce.
 Continua a darmi errore perchè non trova una funzione che si chiama memcpy negli
 handler in exceptions... Non so più dove cercare e per ora mi arrendo e vado a fare tech.
 risolto questo dovrebbe andare tutto.
+
+3/9
+Stiamo provando disperatamente.
+Abbiamo riorganizzato le cartelle
+Abbiamo provato a includere string.h e non funziona.
+Secondo me la chiave di tutto sta in questi .e e nel makefile che dobbiamo fare automatico.
+Ma non sappiamo come fare e la documentazione online sembra enorme. Provo a trovare un "riassunto".

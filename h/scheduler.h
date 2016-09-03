@@ -1,0 +1,20 @@
+#ifndef SCHED_H_INCLUDED
+#define SCHED_H_INCLUDED
+
+
+#define PSEUDO_CLOCK 0
+#define TIME_SLICE 1
+
+//ultima partenza del time slice
+extern unsigned int last_slice_start;
+//per contare lo userTime del processo corrente
+extern unsigned int userTimeStart;
+//per contare il CPUTime del processo corrente
+extern unsigned int CPUTimeStart;
+//ultima partenza dello pseudo clock
+extern unsigned int pseudo_clock_start;
+//quale dei due timer ( pseudo clock o time slice ) alzerà un interrupt per primo
+extern unsigned int current_timer;
+
+
+#endif /* SCHED_H_INCLUDED */
