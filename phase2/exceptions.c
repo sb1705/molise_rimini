@@ -147,7 +147,7 @@ void sysBpHandler(){
 					break;
 
 				case SPECSYSHDL:
-					//specifySysBpHandler((memaddr) argv1, (memaddr) argv2, (unsigned int) argv3);
+					specifySysBpHandler((memaddr) argv1, (memaddr) argv2, (unsigned int) argv3);
 					break;
 
 				case SPECTLBHDL:
