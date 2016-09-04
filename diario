@@ -1237,3 +1237,16 @@ Abbiamo riorganizzato le cartelle
 Abbiamo provato a includere string.h e non funziona.
 Secondo me la chiave di tutto sta in questi .e e nel makefile che dobbiamo fare automatico.
 Ma non sappiamo come fare e la documentazione online sembra enorme. Provo a trovare un "riassunto".
+
+
+4/9
+
+Ho scopero che la memcpy la usava per copiare lo stato del processore nelle
+exeption nelle sys4 5 e 6 .
+Precisamente nella compilazione lui diceva di usare la memcpy per questa
+operazione qui:
+currentProcess->p_excpvec[EXCP_SYS_NEW]=*sysBp_new;
+
+e quindi io usato la nostra copyState per fare lo stesso lavoro
+
+copyState(&currentProcess->p_excpvec[EXCP_SYS_NEW], sysBp_new);

@@ -92,6 +92,7 @@ int memcmp(const void* s1, const void* s2,size_t n)
 }
 
 int isNull(state_t *state){
+
 	state_t state_null;
 	memset(&state_null, 0, sizeof(state_t));
 	if (!memcmp(state,&state_null, sizeof(state_t))){
@@ -99,6 +100,7 @@ int isNull(state_t *state){
 	}else{
 		return 0;
 	}
+
 }
 
 
@@ -145,7 +147,7 @@ void sysBpHandler(){
 					break;
 
 				case SPECSYSHDL:
-					specifySysBpHandler((memaddr) argv1, (memaddr) argv2, (unsigned int) argv3);
+					//specifySysBpHandler((memaddr) argv1, (memaddr) argv2, (unsigned int) argv3);
 					break;
 
 				case SPECTLBHDL:
@@ -386,7 +388,9 @@ void specifySysBpHandler(memaddr pc, memaddr sp, unsigned int flags){
 
 		//ok, dovrei avere qualcosa per vedere se il processo ha già chiamato questa cosa e non ho la più pallida idea di come fare.
 		//L'idea che mi è venuta è di usare l'exception states vector che sta nel pcb. Se poi vedo che ha un'altra funzione penserò a qualcos'altro
-		currentProcess->p_excpvec[EXCP_SYS_NEW]=*sysBp_new;
+
+		copyState(&currentProcess->p_excpvec[EXCP_SYS_NEW], sysBp_new);
+		//currentProcess->p_excpvec[EXCP_SYS_NEW]=*sysBp_new;
 
 	}else{ //visto che la sys4 settata il vettore delle ecezioni del currentProcess alla new area appena fatta se questo è !=NUll (come succede in questo ramo else), allora vuol dire che la sys4 questo processo l'aveva già chiamata quindi devo comportarmi di conseguenza come dicono le specifche
 		terminateProcess(0);
@@ -409,7 +413,8 @@ void specifyTLBHandler(memaddr pc, memaddr sp, unsigned int flags){
 
 		//ok, dovrei avere qualcosa per vedere se il processo ha già chiamato questa cosa e non ho la più pallida idea di come fare.
 		//L'idea che mi è venuta è di usare l'exception states vector che sta nel pcb. Se poi vedo che ha un'altra funzione penserò a qualcos'altro
-		currentProcess->p_excpvec[EXCP_TLB_NEW]=*TLB_new;
+		//currentProcess->p_excpvec[EXCP_TLB_NEW]=*TLB_new;
+		copyState(&currentProcess->p_excpvec[EXCP_TLB_NEW], TLB_new);
 
 	}else{ //visto che la sys4 settata il vettore delle ecezioni del currentProcess alla new area appena fatta se questo è !=NULL (come succede in questo ramo else), allora vuol dire che la sys4 questo processo l'aveva già chiamata quindi devo comportarmi di conseguenza come dicono le specifche
 		terminateProcess(0);
@@ -431,7 +436,8 @@ void specifyPgmTrapHandler(memaddr pc, memaddr sp, unsigned int flags){
 
 		//ok, dovrei avere qualcosa per vedere se il processo ha già chiamato questa cosa e non ho la più pallida idea di come fare.
 		//L'idea che mi è venuta è di usare l'exception states vector che sta nel pcb. Se poi vedo che ha un'altra funzione penserò a qualcos'altro
-		currentProcess->p_excpvec[EXCP_PGMT_NEW]=*pgmTrap_new;
+		//currentProcess->p_excpvec[EXCP_PGMT_NEW]=*pgmTrap_new;
+		copyState(&currentProcess->p_excpvec[EXCP_PGMT_NEW], pgmTrap_new);
 
 	}else{ //visto che la sys4 settata il vettore delle ecezioni del currentProcess alla new area appena fatta se questo è !=NUll (come succede in questo ramo else), allora vuol dire che la sys4 questo processo l'aveva già chiamata quindi devo comportarmi di conseguenza come dicono le specifche
 		terminateProcess(0);
