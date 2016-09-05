@@ -1283,5 +1283,5 @@ Ho provato a spostare la stampa a dopo la semOp e non stampa niente. Le possibil
 - La semOp non funziona.
 
 Per ora mi sembra probabile la prima dato che precedentemente stampava solo una lettera
-Sembrerebbe che il pc del processo non si spostasse... Boh.
+Sembrerebbe che il pc del processo non si sposti... Boh.
 Comunque stupenda la print nel test di phase2 che usa la semOp -.-"
