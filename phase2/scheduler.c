@@ -15,6 +15,15 @@
 #include </usr/include/uarm/libuarm.h>
 #include </usr/include/uarm/uARMconst.h>
 
+/* This function places the specified character string in okbuf and
+ *      causes the string to be written out to terminal0
+ #ifndef ADD_OK_BUFF
+ #define ADD_OK_BUFF
+void addokbuf(char *strp) {
+   tprint(strp) ;
+}
+#endif*/
+
 //Variabili globali definite in initial.h, ho letto da una parte come usare i .h con le variabili locali e quidni quest cosa qui non dovrebbe servire
 // extern pcb_t *currentProcess;
 // extern clist readyQueue;
@@ -77,9 +86,11 @@ void scheduler(){
 	//utente e CPU nel caso in cui la setTimer sia fatta come ultima operazione, per ora lo lascio così, magari ci si pensa dopo
 
 	if (currentProcess==NULL){
-
-		if( !clist_empty(readyQueue) )
+		//addokbuf("currentProcess è NULL\n");
+		if( !clist_empty(readyQueue) ){
 			currentProcess = removeProcQ(&readyQueue);
+			//addokbuf("Ho impostato il currentProcess \n");
+		}
 		else{
 			if( processCount == 0 )	//non ci sono più processi e posso terminare
 				HALT();
@@ -98,7 +109,9 @@ void scheduler(){
 	userTimeStart = getTODLO();	//riparte il conteggio del tempo utente perché noi entriamo nello scheduler come kernel quindi dobbiamo far ripartire il tempo utente quando usciamo
 
 	//carico nel processore lo stato del processo scelto come prossimo
+	//addokbuf("carico il processo  \n");
 	LDST( &currentProcess->p_s );
+	//addokbuf("Questa stampa non ci deve essere  \n");
 }
 //
 // questo di seguito è per vedere se l'interval timer è sttato dal time slice o dallo pseudo clock, non so se ci servirà o meno in futuro, per ora non vedo ragione di annotarlo

@@ -9,6 +9,16 @@
 #include </usr/include/uarm/arch.h>
 //#include </usr/include/uarm/uARMconst.h>
 
+/* This function places the specified character string in okbuf and
+ *      causes the string to be written out to terminal0
+ #ifndef ADD_OK_BUFF
+ #define ADD_OK_BUFF
+void addokbuf(char *strp) {
+   tprint(strp) ;
+}
+#endif
+*/
+
 
 /* definizione della struttura state_t preso dal manuale uARM
  typedef struct{
@@ -43,7 +53,7 @@ extern void test();
 
 //variabili globali
 
-clist readyQueue = CLIST_INIT; //pointer to a queue of pcb?? è una clist?? -> si, perchè quando facciamo insertProcB mettiamo una clist e un pcb
+clist readyQueue; //= CLIST_INIT; //pointer to a queue of pcb?? è una clist?? -> si, perchè quando facciamo insertProcB mettiamo una clist e un pcb
 pcb_t *currentProcess;
 unsigned int processCount; //è giusto farli int?
 unsigned int softBlockCount;
@@ -152,33 +162,34 @@ int main(){
 	 #define SYSBK_NEWAREA (EXCV_BASE + (7 * STATE_T_SIZE))
 
 	 */
-
+	//addokbuf("Sono nel main   \n");
 	populate(SYSBK_NEWAREA, (memaddr) sysBpHandler); //gli handler non li abbiamo ancora implementati, sono in exceptions.c e interrupt.c
 	populate(PGMTRAP_NEWAREA, (memaddr) pgmTrapHandler);
 	populate(TLB_NEWAREA, (memaddr) tlbHandler);
 	populate(INT_NEWAREA, (memaddr) intHandler);
-
+	//addokbuf("Finite populate   \n");
 	// ----2----
 
 	initPcbs();
 	initASL();
-
+	//addokbuf("PCB e SEM inizializzati   \n");
 	// ----3----
 
 	//Initialize all nucleus maintained variables: Process Count, Soft-block Count, Ready Queue, and Current Process.
 
-	//readyQueue = CLIST_INIT;
+	readyQueue.next=NULL;
 	currentProcess = NULL;
 	processCount = 0;
 	softBlockCount = 0;
 
-
+	//addokbuf("Var Globali inizializzate  \n");
 
 	/* Inizializzazione della tabella dei pcb utilizzati */
 	for(i=0; i<MAXPROC; i++){
 			active_pcb[i] = NULL;
 	}
 
+	//addokbuf("Tabella dei pcb attivi inizializzata   \n");
 	// ----4----
 
 	//Initialize all nucleus maintained semaphores. In addition to the above nucleus variables, there is one semaphore variable for each external (sub)device in μARM, plus a semaphore to represent a pseudo-clock timer. Since terminal devices are actually two independent sub-devices (see Section 5.7- pops), the nucleus maintains two semaphores for each terminal device. All of these semaphores need to be initialized to zero.
@@ -189,7 +200,7 @@ int main(){
 	}
 	pseudoClock = 0;
 
-
+	//addokbuf("Tabella dei SEM DEVICE ok \n");
 	// ----5----
 
 	//Instantiate a single process and place its ProcBlk in the Ready Queue. A process is instantiated by allocating a ProcBlk (i.e. allocPcb()), and initializing the processor state that is part of the ProcBlk. In particular this process needs to have interrupts enabled, virtual memory off, the processor Local Timer enabled, kernel-mode on, SP set to RAMTOP- FRAMESIZE (i.e. use the penultimate RAM frame for its stack), and its PC set to the address of test.
@@ -209,10 +220,14 @@ int main(){
 
 
 	insertProcQ(&readyQueue, first);
-	processCount++; //Sara lo vuole mettere direttamente in allocPcb()
+	processCount++;
+	//addokbuf("Primo processo impostato  \n");
 
 	// ----6----
 
+	//addokbuf("Chiamo lo scheduler   \n");
+
+	LDST( &first->p_s );
 	// Call the scheduler.
 	scheduler();
 

@@ -1253,4 +1253,35 @@ copyState(&currentProcess->p_excpvec[EXCP_SYS_NEW], sysBp_new);
 
 5/9
 ho provato a ricompilare la phase1, e mi da ancora l'errore perchè non vuole
-<> quando faccio #include <arch.h>, anche da voi lo fa?
+<> quando faccio #include <arch.h>, anche da voi lo fa? Ho reinstallato uarm e
+non mi dice più niente... ooook
+
+Prima esecuzione phase2: unico messaggio comparso: KERNEL PANIC!
+
+Ho deciso di usare la funzione
+void addokbuf(char *strp) {
+	tprint(strp);
+}
+per le stampe del debug.
+
+Initial.c funziona correttamente fino alla chiamata dello scheduler yeee!!
+
+Il problema è quando entra nello scheduler, sembra che continui a ciclare con la
+funzione scheduler. Stampa all'infinito
+Il currentProcess è NULL
+Ho impostato il currentProcess.
+carico il processo
+
+Forse LDST non basta per eseguire il processo?
+
+Scherzavo, LDST esegue il processo. Ho messo una stampa nel test, la cosa strana
+è che stampa solo la prima lettera... Non è che ogni 5ms ricomincia?
+Come facciamo a far sì che se c'è solo lui continua ad eseguire?
+
+Ho provato a spostare la stampa a dopo la semOp e non stampa niente. Le possibilità sono 2
+- Non arriva neanche a fare la SEMOP perchè non ha abbastanza tempo
+- La semOp non funziona.
+
+Per ora mi sembra probabile la prima dato che precedentemente stampava solo una lettera
+Sembrerebbe che il pc del processo non si spostasse... Boh.
+Comunque stupenda la print nel test di phase2 che usa la semOp -.-"

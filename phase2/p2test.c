@@ -41,6 +41,15 @@
 
 #include "../h/pcb.h"
 
+/* This function places the specified character string in okbuf and
+ *      causes the string to be written out to terminal0*/
+ #ifndef ADD_OK_BUFF
+ #define ADD_OK_BUFF
+void addokbuf(char *strp) {
+   tprint(strp) ;
+}
+#endif
+
 typedef unsigned int devregtr;
 /* if these are not defined */
 typedef unsigned int cpu_t;
@@ -177,8 +186,11 @@ void test() {
 	cpu_t		time1, time2;
 	pid_t	fpid;
 
+	addokbuf("Sono nel test  \n"); //<-- Stampa SSSSSSSSSSS
+
 	SYSCALL(SEMOP, (int)&testsem, 1, 0);					/* V(testsem)   */
 
+	//addokbuf("Sono nel test  \n"); <--- Non viene stampato
 	if (testsem != 1) { print("error: p1 v(testsem) with no effects\n"); PANIC(); }
 
 	print("p1 v(testsem)\n");
