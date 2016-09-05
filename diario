@@ -1250,3 +1250,7 @@ currentProcess->p_excpvec[EXCP_SYS_NEW]=*sysBp_new;
 e quindi io usato la nostra copyState per fare lo stesso lavoro
 
 copyState(&currentProcess->p_excpvec[EXCP_SYS_NEW], sysBp_new);
+
+5/9
+ho provato a ricompilare la phase1, e mi da ancora l'errore perchè non vuole
+<> quando faccio #include <arch.h>, anche da voi lo fa?
